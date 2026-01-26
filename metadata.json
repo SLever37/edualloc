@@ -1,0 +1,7 @@
+{
+  "name": "EduAlloc - Sistema de Gestão de Lotação Escolar",
+  "description": "Um portal completo para RH e Gestores Escolares gerenciarem a alocação de profissionais, licenças e controle de presença por unidade.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

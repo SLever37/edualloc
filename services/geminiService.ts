@@ -1,0 +1,42 @@
+
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { Funcionario, Escola, Funcao } from "../types";
+
+export const obterInsightsRH = async (funcionarios: Funcionario[], escolas: Escola[], funcoes: Funcao[]) => {
+  // Always initialize with named parameter apiKey
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const dadosRH = funcionarios.map(f => ({
+    nome: f.nome,
+    funcao: funcoes.find(r => r.id === f.funcaoId)?.nome,
+    status: f.status,
+    escola: escolas.find(e => e.id === f.escolaId)?.nome,
+    possuiDobra: f.possuiDobra
+  }));
+
+  const prompt = `
+    Analise os seguintes dados de lotação escolar de RH:
+    ${JSON.stringify(dadosRH, null, 2)}
+    
+    Identifique de forma concisa:
+    1. Problemas críticos (ex: muitas licenças em uma única escola).
+    2. Sugestões de otimização.
+    3. Resumo de ativos vs licenças.
+    4. Alerta sobre funcionários com múltiplas cadeiras (mesmo nome mas matrículas diferentes).
+
+    Responda em português brasileiro, de forma executiva e profissional.
+  `;
+
+  try {
+    // Upgraded to gemini-3-pro-preview for complex reasoning task
+    const response: GenerateContentResponse = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+    });
+    // Access response.text directly (property, not a function)
+    return response.text;
+  } catch (error) {
+    console.error("Erro AI Insight:", error);
+    return "Não foi possível gerar insights no momento.";
+  }
+};
