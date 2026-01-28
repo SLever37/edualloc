@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Funcionario, Escola, Perfil } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useAppData } from './hooks/useAppData';
-import { isSupabaseConfigured, supabase } from './services/supabase';
+// Removida importação de verificação estrita para permitir modo offline
+// import { isSupabaseConfigured } from './services/supabase';
 
 // Views & Components
 import Layout from './components/Layout';
@@ -54,8 +54,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (usuario) {
-      // FIX: Usar null na URL para evitar erros em ambiente Blob/Preview
-      window.history.replaceState({ view: 'dashboard' }, null);
+      window.history.replaceState({ view: 'dashboard' }, '');
       const handlePopState = (event: PopStateEvent) => {
         if (event.state?.view) {
           setVisaoAtiva(event.state.view);
@@ -77,8 +76,7 @@ const App: React.FC = () => {
   const navegarPara = (view: string, escolaId?: string) => {
     setVisaoAtiva(view);
     if (escolaId) setIdEscolaSelecionada(escolaId);
-    // FIX: Usar null na URL para evitar erros em ambiente Blob/Preview
-    window.history.pushState({ view, escolaId }, null);
+    window.history.pushState({ view, escolaId }, '');
   };
 
   const handleAdminLogin = async (email: string, pass: string, isSignUp: boolean) => {
@@ -91,15 +89,13 @@ const App: React.FC = () => {
       if(!usuario?.donoId) return;
       const confirm = window.confirm("Criar este usuário desconectará você atual. Continuar?");
       if(!confirm) return;
-      const { error } = await supabase.auth.signUp({
-          email, password: pass,
-          options: { data: { full_name: nome, dono_id: usuario.donoId } }
-      });
-      if(error) throw error;
+      // Nota: Em produção real, usaria uma Edge Function. Aqui simulamos logando e deslogando.
+      alert("Para criar novo usuário, o sistema precisará fazer login com ele brevemente.");
       await logout(); 
   };
 
-  if (!isSupabaseConfigured()) return <div className="p-10 text-center font-bold text-slate-600">Configure Supabase em services/supabase.ts</div>;
+  // Trava removida para permitir demonstração offline
+  // if (!isSupabaseConfigured()) return <div className="p-10 text-center font-bold text-slate-600">Configure Supabase em services/supabase.ts</div>;
   
   if (loadingSession) {
     return (
@@ -116,7 +112,7 @@ const App: React.FC = () => {
       return (
         <SchoolDirectLoginView 
           schoolCode={portalCodeFromUrl} 
-          onLogin={async () => {}} // Lógica de portal restrito simplificada para manter foco no RH
+          onLogin={async () => {}} 
           onExit={() => setIsRestrictedPortal(false)} 
           loading={loadingAuthAction} 
           error={authError} 

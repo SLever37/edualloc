@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Funcionario, StatusFuncionario, Escola, Funcao, Setor, TipoLotacao, Turno, HistoricoLotacao } from '../types';
+import { Funcionario, StatusFuncionario, Escola, Funcao, Setor, TipoLotacao, Turno, HistoricoLotacao, NivelFormacao } from '../types';
 import { supabase } from '../services/supabase';
 
 interface EmployeeModalProps {
@@ -13,16 +12,20 @@ interface EmployeeModalProps {
 }
 
 const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles, sectors, onSave, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'dados' | 'lotacao' | 'midia' | 'historico'>('dados');
+  const [activeTab, setActiveTab] = useState<'dados' | 'lotacao' | 'academico' | 'midia' | 'historico'>('dados');
   
   const [formData, setFormData] = useState<Partial<Funcionario>>({
     nome: '', cpf: '', matricula: '',
+    email: '', telefone: '',
     funcaoId: roles[0]?.id || '', setorId: sectors[0]?.id || '',
     status: StatusFuncionario.ATIVO, escolaId: schools[0]?.id || '',
     possuiDobra: false,
     tipoLotacao: TipoLotacao.DEFINITIVA,
     turno: Turno.MANHA,
-    cargaHorariaSemanal: 40,
+    cargaHorariaSemanal: 20, // Padrão menor para evitar conflito inicial
+    nivelFormacao: NivelFormacao.GRADUACAO,
+    cursoFormacao: '',
+    anoIngresso: new Date().getFullYear(),
     ...employee
   });
 
@@ -85,13 +88,14 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
           {/* Header */}
           <div className="p-6 md:p-8 bg-indigo-600 text-white shrink-0 flex justify-between items-start">
              <div className="w-full">
-                <h2 className="text-xl md:text-2xl font-black tracking-tight">{employee?.id ? 'Dossiê do Servidor' : 'Novo Servidor'}</h2>
+                <h2 className="text-xl md:text-2xl font-black tracking-tight">{employee?.id ? 'Editar Vínculo' : 'Novo Vínculo/Matrícula'}</h2>
                 <div className="flex gap-6 mt-6 overflow-x-auto pb-1 no-scrollbar">
                     <button type="button" onClick={() => setActiveTab('dados')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'dados' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Dados Pessoais</button>
-                    <button type="button" onClick={() => setActiveTab('lotacao')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'lotacao' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Lotação & Vínculo</button>
+                    <button type="button" onClick={() => setActiveTab('academico')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'academico' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Formação</button>
+                    <button type="button" onClick={() => setActiveTab('lotacao')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'lotacao' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Lotação & Carga</button>
                     <button type="button" onClick={() => setActiveTab('midia')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'midia' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Docs & Mídia</button>
                     {employee?.id && (
-                        <button type="button" onClick={() => setActiveTab('historico')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'historico' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Linha do Tempo</button>
+                        <button type="button" onClick={() => setActiveTab('historico')} className={`text-xs font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'historico' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Histórico</button>
                     )}
                 </div>
              </div>
@@ -114,8 +118,17 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
                         <input required type="text" placeholder="000.000.000-00" className={inputClass} value={formData.cpf} onChange={e => setFormData({ ...formData, cpf: e.target.value })} />
                     </div>
                     <div>
-                        <label className={labelClass}>Matrícula Funcional</label>
+                        <label className={labelClass}>Matrícula (Vínculo Único)</label>
                         <input required type="text" className={inputClass} value={formData.matricula} onChange={e => setFormData({ ...formData, matricula: e.target.value })} />
+                        <p className="text-[9px] text-slate-400 mt-1">Para duplo vínculo, crie um novo cadastro com outra matrícula.</p>
+                    </div>
+                    <div>
+                        <label className={labelClass}>E-mail Pessoal</label>
+                        <input type="email" placeholder="nome@exemplo.com" className={inputClass} value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                    </div>
+                    <div>
+                        <label className={labelClass}>WhatsApp / Celular</label>
+                        <input type="text" placeholder="(00) 00000-0000" className={inputClass} value={formData.telefone || ''} onChange={e => setFormData({ ...formData, telefone: e.target.value })} />
                     </div>
                     <div>
                         <label className={labelClass}>Cargo / Função</label>
@@ -123,12 +136,39 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
                             {roles.map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
                         </select>
                     </div>
-                    <div>
-                        <label className={labelClass}>Status Atual</label>
-                        <select className={inputClass} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as StatusFuncionario })}>
-                            {Object.values(StatusFuncionario).map(s => <option key={s} value={s}>{s}</option>)}
+                  </div>
+              )}
+
+              {/* ABA ACADÊMICO (NOVA) */}
+              {activeTab === 'academico' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-2">
+                     <div className="md:col-span-2 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl mb-2">
+                        <p className="text-xs text-indigo-700 font-bold">Registro de qualificação vinculado a esta matrícula ({formData.matricula}).</p>
+                     </div>
+
+                     <div>
+                        <label className={labelClass}>Nível de Formação</label>
+                        <select className={inputClass} value={formData.nivelFormacao} onChange={e => setFormData({ ...formData, nivelFormacao: e.target.value as NivelFormacao })}>
+                            {Object.values(NivelFormacao).map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
-                    </div>
+                     </div>
+                     
+                     <div>
+                        <label className={labelClass}>Curso / Área</label>
+                        <input type="text" placeholder="Ex: Pedagogia, Matemática..." className={inputClass} value={formData.cursoFormacao || ''} onChange={e => setFormData({ ...formData, cursoFormacao: e.target.value })} />
+                     </div>
+
+                     <div>
+                        <label className={labelClass}>Ano de Ingresso</label>
+                        <input type="number" className={inputClass} value={formData.anoIngresso} onChange={e => setFormData({ ...formData, anoIngresso: Number(e.target.value) })} />
+                     </div>
+
+                     <div>
+                        <label className={labelClass}>Tempo de Serviço (Calculado)</label>
+                        <div className="h-12 flex items-center px-4 bg-slate-100 rounded-xl text-slate-500 font-bold border border-slate-200">
+                            {formData.anoIngresso ? `${new Date().getFullYear() - (formData.anoIngresso || 0)} anos` : '-'}
+                        </div>
+                     </div>
                   </div>
               )}
 
@@ -167,24 +207,19 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
                         </div>
                         <div>
                             <label className={labelClass}>Carga Horária Semanal</label>
-                            <div className="relative">
-                                <input type="number" className={inputClass} value={formData.cargaHorariaSemanal} onChange={e => setFormData({ ...formData, cargaHorariaSemanal: Number(e.target.value) })} />
-                                <span className="absolute right-4 top-3.5 text-xs font-bold text-slate-400">Horas</span>
-                            </div>
+                            <select className={inputClass} value={formData.cargaHorariaSemanal} onChange={e => setFormData({ ...formData, cargaHorariaSemanal: Number(e.target.value) })}>
+                                <option value={20}>20 Horas</option>
+                                <option value={25}>25 Horas</option>
+                                <option value={40}>40 Horas</option>
+                                <option value={60}>60 Horas (Dobra/Extra)</option>
+                            </select>
                         </div>
-                    </div>
-                    
-                    <div className="flex items-center pt-4 border-t border-slate-100">
-                        <label className="flex items-center gap-4 cursor-pointer p-4 hover:bg-slate-50 rounded-xl transition w-full border border-transparent hover:border-slate-200">
-                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition ${formData.possuiDobra ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
-                                {formData.possuiDobra && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4"><polyline points="20 6 9 17 4 12"/></svg>}
-                            </div>
-                            <input type="checkbox" className="hidden" checked={formData.possuiDobra} onChange={e => setFormData({ ...formData, possuiDobra: e.target.checked })} />
-                            <div>
-                                <span className="text-sm font-bold text-slate-700 block">Possui Dobra (Dois Vínculos)</span>
-                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">O servidor acumula cargos na rede</span>
-                            </div>
-                        </label>
+                        <div>
+                            <label className={labelClass}>Status Atual</label>
+                            <select className={inputClass} value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as StatusFuncionario })}>
+                                {Object.values(StatusFuncionario).map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                        </div>
                     </div>
                   </div>
               )}
@@ -204,27 +239,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
                               <span className="text-white text-xs font-bold uppercase">Alterar Foto</span>
                           </div>
                           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-                      </div>
-                      
-                      <div className="w-full max-w-md bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-300">
-                          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex justify-between">
-                              Documentos
-                              <span className="text-indigo-600 cursor-pointer hover:underline">+ Adicionar</span>
-                          </h3>
-                          <div className="space-y-2">
-                             {/* Mock Visual de Documentos */}
-                             <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-rose-100 text-rose-600 rounded-lg flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-700">Contrato_2024.pdf</p>
-                                        <p className="text-[10px] text-slate-400">Vence em: 31/12/2024</p>
-                                    </div>
-                                </div>
-                                <button className="text-slate-300 hover:text-rose-500"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-                             </div>
-                             <p className="text-[10px] text-center text-slate-400 pt-2">Faça upload de documentos com data de validade.</p>
-                          </div>
                       </div>
                   </div>
               )}
@@ -271,7 +285,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
           <div className="p-6 bg-slate-50 border-t flex justify-end gap-4 shrink-0 safe-area-bottom">
             <button type="button" onClick={onClose} className="px-6 py-3 text-slate-500 font-black uppercase text-xs hover:bg-slate-200 rounded-xl transition">Cancelar</button>
             <button type="submit" className="px-8 py-3 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 text-xs uppercase tracking-wide">
-                {employee?.id ? 'Atualizar Dossiê' : 'Cadastrar Servidor'}
+                {employee?.id ? 'Atualizar Dossiê' : 'Cadastrar Vínculo'}
             </button>
           </div>
         </form>

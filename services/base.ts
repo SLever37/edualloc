@@ -1,11 +1,7 @@
+import { supabase } from './supabase';
 
-import { createClient } from '@supabase/supabase-js';
-
-// Configuração do Cliente
-const SUPABASE_URL = 'https://bucutqjribdrqkvwmxbb.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_JXeJmxr7EvzfG-PxF4x16w_96eVzKOT';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Re-exporta supabase para compatibilidade
+export { supabase };
 
 // Fetcher Genérico com Proteção de Tenancy
 export async function fetchData<T>(table: string, donoId?: string): Promise<T[]> {

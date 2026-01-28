@@ -1,9 +1,9 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Funcionario, Escola, Funcao } from "../types";
 
 export const obterInsightsRH = async (funcionarios: Funcionario[], escolas: Escola[], funcoes: Funcao[]) => {
-  // Always initialize with named parameter apiKey
+  // Use process.env.API_KEY as per Google GenAI SDK guidelines.
+  // Assumes the variable is pre-configured and accessible.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const dadosRH = funcionarios.map(f => ({
@@ -28,12 +28,10 @@ export const obterInsightsRH = async (funcionarios: Funcionario[], escolas: Esco
   `;
 
   try {
-    // Upgraded to gemini-3-pro-preview for complex reasoning task
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-2.0-flash', // Modelo atualizado para garantir compatibilidade/rapidez
       contents: prompt,
     });
-    // Access response.text directly (property, not a function)
     return response.text;
   } catch (error) {
     console.error("Erro AI Insight:", error);

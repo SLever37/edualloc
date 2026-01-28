@@ -32,6 +32,15 @@ export enum Turno {
   ALTERNADO = 'Alternado'
 }
 
+export enum NivelFormacao {
+  MEDIO = 'Ensino Médio',
+  GRADUACAO = 'Graduação',
+  POS_GRADUACAO = 'Pós-Graduação',
+  MESTRADO = 'Mestrado',
+  DOUTORADO = 'Doutorado',
+  POS_DOUTORADO = 'Pós-Doutorado'
+}
+
 export enum OcorrenciaFrequencia {
   PRESENCA = 'Presença',
   FALTA_INJUSTIFICADA = 'Falta Injustificada',
@@ -76,31 +85,42 @@ export interface Funcionario {
   id: string;
   nome: string;
   cpf: string;
-  matricula: string;
+  matricula: string; // Identificador único do Vínculo
+  
+  email?: string;
+  telefone?: string;
+
   funcaoId: string;
   setorId: string;
   status: StatusFuncionario;
   escolaId: string;
   
-  // Novos Campos de RH
   tipoLotacao: TipoLotacao;
   turno: Turno;
-  cargaHorariaSemanal: number;
+  cargaHorariaSemanal: number; // 20, 25, 40, 60
   
-  possuiDobra: boolean;
-  presencaConfirmada: boolean; // Mantido para compatibilidade visual rápida
+  // RH Acadêmico e Histórico
+  nivelFormacao?: NivelFormacao;
+  cursoFormacao?: string;
+  anoIngresso?: number;
+  
+  possuiDobra: boolean; // Flag visual, mas o controle real é por múltiplas matrículas
+  presencaConfirmada: boolean;
   ultimaOcorrencia?: OcorrenciaFrequencia;
+  observacaoFrequencia?: string;
+  atestadoUrl?: string;
   
   donoId?: string;
   fotoUrl?: string; 
   documentos?: Documento[];
-  historico?: HistoricoLotacao[]; // Populado sob demanda
+  historico?: HistoricoLotacao[];
 }
 
 export interface Escola {
   id: string;
   nome: string;
   endereco: string;
+  turnosAtivos: Turno[]; // Configuração da Escola (Quais turnos ela opera)
   codigoGestor: string;
   codigoAcesso: string;
   donoId?: string;

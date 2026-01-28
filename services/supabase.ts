@@ -1,14 +1,13 @@
-
 import { createClient } from '@supabase/supabase-js';
 
-// ⚠️ ATENÇÃO: SUBSTITUA ESTAS VARIÁVEIS PELOS DADOS DO SEU PROJETO SUPABASE
-// Você encontra estes dados no painel do Supabase em: Project Settings -> API
-const SUPABASE_URL = 'https://bucutqjribdrqkvwmxbb.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_JXeJmxr7EvzfG-PxF4x16w_96eVzKOT';
+// Fallback para evitar erro "supabaseUrl is required" se as envs faltarem
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'placeholder';
 
-// Helper para verificar se o usuário configurou as chaves
 export const isSupabaseConfigured = () => {
-  return !SUPABASE_URL.includes('seu-projeto') && !SUPABASE_ANON_KEY.includes('sua-chave');
+  // Verifica se as variáveis REAIS existem (não os placeholders)
+  return (process.env.VITE_SUPABASE_URL?.length ?? 0) > 0 && 
+         (process.env.VITE_SUPABASE_ANON_KEY?.length ?? 0) > 0;
 };
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

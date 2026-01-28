@@ -1,9 +1,10 @@
+
 import { Escola, Funcionario, StatusFuncionario, TipoLotacao, Turno } from './types';
 
 export const ESCOLAS_INICIAIS: Escola[] = [
-  { id: '1', nome: 'E.M. Machado de Assis', endereco: 'Rua das Flores, 123', codigoGestor: 'MA-9921', codigoAcesso: '1234' },
-  { id: '2', nome: 'CIEP 201 - Monteiro Lobato', endereco: 'Av. Brasil, 500', codigoGestor: 'ML-1044', codigoAcesso: '1234' },
-  { id: '3', nome: 'E.M. Clarice Lispector', endereco: 'Praça da Paz, 10', codigoGestor: 'CL-7723', codigoAcesso: '1234' }
+  { id: '1', nome: 'E.M. Machado de Assis', endereco: 'Rua das Flores, 123', codigoGestor: 'MA-9921', codigoAcesso: '1234', turnosAtivos: [Turno.MANHA, Turno.TARDE] },
+  { id: '2', nome: 'CIEP 201 - Monteiro Lobato', endereco: 'Av. Brasil, 500', codigoGestor: 'ML-1044', codigoAcesso: '1234', turnosAtivos: [Turno.MANHA, Turno.TARDE, Turno.NOITE] },
+  { id: '3', nome: 'E.M. Clarice Lispector', endereco: 'Praça da Paz, 10', codigoGestor: 'CL-7723', codigoAcesso: '1234', turnosAtivos: [Turno.MANHA, Turno.TARDE] }
 ];
 
 export const FUNCIONARIOS_INICIAIS: Funcionario[] = [

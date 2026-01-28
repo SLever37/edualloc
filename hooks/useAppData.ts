@@ -1,11 +1,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Funcionario, Escola, Perfil, OcorrenciaFrequencia } from '../types';
+import { Funcionario, Escola, Perfil, OcorrenciaFrequencia, StatusFuncionario } from '../types';
 import { employeeService } from '../services/employeeService';
 import { schoolService } from '../services/schoolService';
 import { useCatalogs } from './useCatalogs';
 
-// Facade Hook: Mantém compatibilidade com a View, mas usa Arquitetura Limpa por baixo
 export const useAppData = (
   usuarioId: string | undefined,
   donoId: string | undefined,
@@ -14,14 +13,12 @@ export const useAppData = (
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [escolas, setEscolas] = useState<Escola[]>([]);
 
-  // Composição: Usa o hook de catálogos
   const { 
     setores, funcoes, carregarCatalogos, 
     adicionarSetor, editarSetor, removerSetor, 
     adicionarFuncao, editarFuncao, removerFuncao 
   } = useCatalogs(donoId);
 
-  // Carregamento Centralizado
   const recarregarDados = useCallback(async () => {
     if (!donoId) return;
 
@@ -33,7 +30,6 @@ export const useAppData = (
         schoolService.getAll(donoId)
       ]);
 
-      // Mappers
       setFuncionarios(fData.map((f: any) => ({
         ...f,
         funcaoId: f.funcao_id,
@@ -41,10 +37,11 @@ export const useAppData = (
         escolaId: f.escola_id,
         possuiDobra: f.possui_dobra,
         presencaConfirmada: f.presenca_confirmada,
-        // Novos campos (com fallback para compatibilidade com dados antigos)
         tipoLotacao: f.tipo_lotacao || 'Definitiva',
         turno: f.turno || 'Manhã',
         cargaHorariaSemanal: f.carga_horaria || 40,
+        observacaoFrequencia: f.observacao_frequencia, 
+        atestadoUrl: f.atestado_url,
         donoId: f.dono_id,
         fotoUrl: f.foto_url
       })));
@@ -65,7 +62,6 @@ export const useAppData = (
     recarregarDados();
   }, [recarregarDados]);
 
-  // Actions Wrappers
   const salvarFuncionario = async (dados: Partial<Funcionario>, foto?: File) => {
     if (!donoId) {
         alert("Sessão inválida. Tente recarregar a página.");
@@ -93,16 +89,14 @@ export const useAppData = (
     await recarregarDados();
   };
 
-  const alternarPresenca = async (id: string, ocorrencia: OcorrenciaFrequencia) => {
+  const alternarPresenca = async (id: string, ocorrencia: OcorrenciaFrequencia, observacao?: string, statusGeral?: StatusFuncionario, arquivo?: File) => {
     if (!donoId) return;
-    await employeeService.registrarFrequencia(id, ocorrencia, donoId);
+    await employeeService.registrarFrequencia(id, ocorrencia, donoId, observacao, statusGeral, arquivo);
     await recarregarDados();
   };
 
   const importarEmLote = async (listaFuncionarios: Partial<Funcionario>[]) => {
     if (!donoId) return;
-    // Processamento sequencial para garantir integridade e uploads se necessário
-    // Em produção ideal, isso seria um endpoint bulk no backend
     for (const func of listaFuncionarios) {
       await employeeService.save(func, donoId);
     }
@@ -120,7 +114,6 @@ export const useAppData = (
     removerEscola,
     alternarPresenca,
     importarEmLote,
-    // Catálogos
     adicionarSetor,
     editarSetor,
     removerSetor,

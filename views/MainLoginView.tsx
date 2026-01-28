@@ -20,7 +20,6 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
   const [isSignUp, setIsSignUp] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   
-  // Instância local do hook apenas para acesso ao método loginGoogle
   const { loginGoogle } = useAuth(); 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,7 +32,6 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
     onClearMessages();
     try {
         await loginGoogle();
-        // Se der certo, redireciona, não precisa setar false
     } catch (error) {
         setGoogleLoading(false);
     }
@@ -42,14 +40,15 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
   const isLoadingAny = loading || googleLoading;
 
   return (
-    <div className="h-full w-full bg-slate-950 flex items-center justify-center p-4 relative font-sans overflow-y-auto custom-scrollbar">
-      {/* Background Decorativo */}
+    <div className="h-full w-full bg-slate-950 flex flex-col items-center justify-center p-4 relative font-sans overflow-y-auto custom-scrollbar">
+      {/* Background Decorativo - Z-Index 0 */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
           <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-indigo-600 rounded-full opacity-10 blur-[150px] animate-pulse"></div>
           <div className="absolute bottom-[-20%] left-[-10%] w-[800px] h-[800px] bg-emerald-600 rounded-full opacity-10 blur-[150px] animate-pulse" style={{animationDelay: '1s'}}></div>
       </div>
 
-      <div className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in duration-500 relative z-10 border border-white/40 my-auto shrink-0">
+      {/* Container Principal - Z-Index 50 para garantir clique */}
+      <div className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in duration-500 relative z-50 border border-white/40 my-auto shrink-0">
         
         {/* Header */}
         <div className="p-12 pb-6 text-center">
@@ -144,6 +143,13 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                 </div>
             </form>
           </div>
+        </div>
+
+        {/* Rodapé Personalizado */}
+        <div className="relative z-10 mt-6 text-center">
+            <p className="text-slate-500 text-xs font-medium opacity-60">
+                Criado por <span className="font-bold text-slate-400">Sócrates Leve</span>
+            </p>
         </div>
       </div>
     </div>

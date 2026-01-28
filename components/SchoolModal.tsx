@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Escola } from '../types';
+import { Escola, Turno } from '../types';
 
 interface SchoolModalProps {
   school?: Escola;
@@ -21,12 +20,24 @@ const SchoolModal: React.FC<SchoolModalProps> = ({ school, onSave, onClose }) =>
     return {
       nome: '',
       endereco: '',
-      ...gerarCredenciais() // Gera automaticamente ao abrir novo
+      turnosAtivos: [Turno.MANHA, Turno.TARDE], // Padrão matutino/vespertino
+      ...gerarCredenciais()
     };
   });
 
   const regenerarAcessos = () => {
     setFormData(prev => ({ ...prev, ...gerarCredenciais() }));
+  };
+
+  const toggleTurno = (turno: Turno) => {
+    setFormData(prev => {
+        const atuais = prev.turnosAtivos || [];
+        if (atuais.includes(turno)) {
+            return { ...prev, turnosAtivos: atuais.filter(t => t !== turno) };
+        } else {
+            return { ...prev, turnosAtivos: [...atuais, turno] };
+        }
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -53,7 +64,7 @@ const SchoolModal: React.FC<SchoolModalProps> = ({ school, onSave, onClose }) =>
             </button>
           </div>
           
-          {/* Corpo Rolável - min-h-0 é CRUCIAL para scroll */}
+          {/* Corpo Rolável */}
           <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
             <div className="pb-32">
                 <div>
@@ -78,6 +89,29 @@ const SchoolModal: React.FC<SchoolModalProps> = ({ school, onSave, onClose }) =>
                     value={formData.endereco} 
                     onChange={e => setFormData({ ...formData, endereco: e.target.value })} 
                 />
+                </div>
+
+                {/* Configuração de Turnos */}
+                <div className="mt-6">
+                    <label className={labelClass}>Turnos de Funcionamento</label>
+                    <div className="grid grid-cols-3 gap-3">
+                        {[Turno.MANHA, Turno.TARDE, Turno.NOITE].map((turno) => {
+                            const ativo = formData.turnosAtivos?.includes(turno);
+                            return (
+                                <button
+                                    key={turno}
+                                    type="button"
+                                    onClick={() => toggleTurno(turno)}
+                                    className={`p-3 rounded-xl border-2 font-black text-xs uppercase transition ${ativo ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-400 hover:border-emerald-200'}`}
+                                >
+                                    {turno} {ativo && '✓'}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2 ml-1">
+                        Defina quais turnos esta unidade atende para validar alocações.
+                    </p>
                 </div>
 
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mt-6">
@@ -112,9 +146,6 @@ const SchoolModal: React.FC<SchoolModalProps> = ({ school, onSave, onClose }) =>
                         />
                     </div>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-3 text-center">
-                        Estes dados são gerados automaticamente pelo sistema.
-                    </p>
                 </div>
             </div>
           </div>
