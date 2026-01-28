@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { Funcionario, Escola, Funcao } from "../types";
 
@@ -28,8 +29,9 @@ export const obterInsightsRH = async (funcionarios: Funcionario[], escolas: Esco
   `;
 
   try {
+    // Fix: Updated model to 'gemini-3-flash-preview' as it is the standard for basic text tasks like summarization and insights.
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-2.0-flash', // Modelo atualizado para garantir compatibilidade/rapidez
+      model: 'gemini-3-flash-preview',
       contents: prompt,
     });
     return response.text;

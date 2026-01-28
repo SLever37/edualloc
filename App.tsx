@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Funcionario, Escola, Perfil } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useAppData } from './hooks/useAppData';
-// Removida importação de verificação estrita para permitir modo offline
-// import { isSupabaseConfigured } from './services/supabase';
+import { checkDatabaseConnection } from './services/supabase';
 
 // Views & Components
 import Layout from './components/Layout';
@@ -29,6 +28,7 @@ const App: React.FC = () => {
   const [idEscolaSelecionada, setIdEscolaSelecionada] = useState<string | null>(null);
   const [isRestrictedPortal, setIsRestrictedPortal] = useState(false);
   const [portalCodeFromUrl, setPortalCodeFromUrl] = useState('');
+  const [dbStatus, setDbStatus] = useState<{ok: boolean, message: string} | null>(null);
   
   const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState<Funcionario | undefined>();
   const [escolaEmEdicao, setEscolaEmEdicao] = useState<Escola | undefined>();
@@ -44,6 +44,16 @@ const App: React.FC = () => {
   } = useAppData(usuario?.id, usuario?.donoId, usuario?.perfil);
 
   useEffect(() => {
+    // Diagnóstico rápido ao iniciar
+    const checkDb = async () => {
+        const status = await checkDatabaseConnection();
+        setDbStatus(status);
+        if (!status.ok) {
+            console.error("Supabase Connection Issue:", status.message);
+        }
+    };
+    checkDb();
+
     const params = new URLSearchParams(window.location.search);
     const portalCode = params.get('portal');
     if (portalCode) {
@@ -87,16 +97,9 @@ const App: React.FC = () => {
 
   const adicionarMembroEquipe = async (email: string, pass: string, nome: string) => {
       if(!usuario?.donoId) return;
-      const confirm = window.confirm("Criar este usuário desconectará você atual. Continuar?");
-      if(!confirm) return;
-      // Nota: Em produção real, usaria uma Edge Function. Aqui simulamos logando e deslogando.
-      alert("Para criar novo usuário, o sistema precisará fazer login com ele brevemente.");
-      await logout(); 
+      alert("Recurso disponível em breve. Use o painel de Auth do Supabase por enquanto.");
   };
 
-  // Trava removida para permitir demonstração offline
-  // if (!isSupabaseConfigured()) return <div className="p-10 text-center font-bold text-slate-600">Configure Supabase em services/supabase.ts</div>;
-  
   if (loadingSession) {
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
@@ -132,6 +135,19 @@ const App: React.FC = () => {
   // MAIN APP
   return (
     <Layout user={usuario} onLogout={logout} onNavigate={(view) => navegarPara(view)} activeView={visaoAtiva}>
+      {/* Alerta de Banco de Dados se não estiver OK */}
+      {dbStatus && !dbStatus.ok && visaoAtiva === 'dashboard' && (
+          <div className="mb-8 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-4 text-rose-800 animate-in slide-in-from-top-4">
+              <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                  <p className="text-sm font-black uppercase">Atenção: Erro de Banco de Dados</p>
+                  <p className="text-xs font-medium opacity-80">{dbStatus.message}</p>
+              </div>
+          </div>
+      )}
+
       {visaoAtiva === 'dashboard' && <Dashboard employees={funcionarios} schools={escolas} roles={funcoes} />}
       {visaoAtiva === 'employees' && (
         <PessoalView 
