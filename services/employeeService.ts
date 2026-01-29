@@ -52,7 +52,7 @@ export const employeeService = {
       if (url) fotoUrl = url;
     }
 
-    const payload = {
+    const payload: any = {
       id: func.id || undefined,
       nome: func.nome,
       cpf: func.cpf,
@@ -65,16 +65,19 @@ export const employeeService = {
       escola_id: func.escolaId || null,
       possui_dobra: !!func.possuiDobra,
       presenca_confirmada: !!func.presencaConfirmada,
+      // Fix: Property 'tipo_lotacao' does not exist on type 'Partial<Funcionario>'. Changed to 'tipoLotacao'.
       tipo_lotacao: func.tipoLotacao || 'Definitiva',
       turnos: Array.isArray(func.turnos) ? func.turnos : [],
       carga_horaria: Math.floor(Number(func.cargaHoraria || 0)),
-      nivel_formacao: func.nivelFormacao,
-      curso_formacao: func.cursoFormacao,
-      ano_ingresso: func.anoIngresso,
-      data_ingresso: func.dataIngresso || null,
-      foto_url: fotoUrl || null,
       dono_id: donoId
     };
+
+    // Adiciona colunas extras apenas se existirem valores para evitar erros de schema em bancos legados
+    if (func.nivelFormacao) payload.nivel_formacao = func.nivelFormacao;
+    if (func.cursoFormacao) payload.curso_formacao = func.cursoFormacao;
+    if (func.anoIngresso) payload.ano_ingresso = func.anoIngresso;
+    if (func.dataIngresso) payload.data_ingresso = func.dataIngresso;
+    if (fotoUrl) payload.foto_url = fotoUrl;
 
     const { error } = await supabase.from('funcionarios').upsert(payload);
     if (error) throw new Error(error.message);
@@ -93,9 +96,15 @@ export const employeeService = {
           const url = await uploadFile('fotos', path, file);
           if (url) atestadoUrl = url;
       }
-      const updateData: any = { presenca_confirmada: presencaConfirmada, observacao_frequencia: obs || null };
+      
+      const updateData: any = { 
+        presenca_confirmada: presencaConfirmada, 
+        observacao_frequencia: obs || null 
+      };
+      
       if (atestadoUrl) updateData.atestado_url = atestadoUrl;
       if (st) updateData.status = st;
+      
       const { error } = await supabase.from('funcionarios').update(updateData).eq('id', id);
       if (error) throw error;
   }

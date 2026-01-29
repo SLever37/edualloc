@@ -1,8 +1,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Funcionario, Escola, Perfil, OcorrenciaFrequencia, StatusFuncionario } from '../types.ts';
+import { Funcionario, Escola, Perfil, OcorrenciaFrequencia, StatusFuncionario, RhContact } from '../types.ts';
 import { employeeService } from '../services/employeeService.ts';
 import { schoolService } from '../services/schoolService.ts';
+import { rhContactService } from '../services/rhContactService.ts';
 import { useCatalogs } from './useCatalogs.ts';
 
 export const useAppData = (
@@ -12,6 +13,7 @@ export const useAppData = (
 ) => {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [escolas, setEscolas] = useState<Escola[]>([]);
+  const [contatosRhGlobais, setContatosRhGlobais] = useState<RhContact[]>([]);
 
   const { 
     setores, funcoes, carregarCatalogos, 
@@ -19,11 +21,30 @@ export const useAppData = (
     adicionarFuncao, editarFuncao, removerFuncao 
   } = useCatalogs(donoId);
 
+  const carregarContatosGlobais = useCallback(async () => {
+    if (!donoId) return;
+    try {
+      const data = await rhContactService.getAll(donoId);
+      if (data && data.length > 0) {
+        setContatosRhGlobais(data);
+      } else {
+        // Fallback apenas se banco retornar vazio
+        setContatosRhGlobais([
+          { label: 'Suporte RH Central', value: 'rh@municipio.gov.br', type: 'email' },
+          { label: 'Plantão Lotação', value: '(00) 0000-0000', type: 'phone' }
+        ]);
+      }
+    } catch (e) {
+      console.error("Erro ao carregar contatos de RH:", e);
+    }
+  }, [donoId]);
+
   const recarregarDados = useCallback(async () => {
     if (!donoId) return;
 
     try {
       carregarCatalogos();
+      carregarContatosGlobais();
 
       const [fData, eData] = await Promise.all([
         employeeService.getAll(donoId),
@@ -36,7 +57,7 @@ export const useAppData = (
     } catch (e) {
       console.error("Erro crítico no carregamento de dados:", e);
     }
-  }, [donoId, carregarCatalogos]);
+  }, [donoId, carregarCatalogos, carregarContatosGlobais]);
 
   useEffect(() => {
     recarregarDados();
@@ -84,6 +105,17 @@ export const useAppData = (
     }
   };
 
+  const salvarContatosGlobais = async (novosContatos: RhContact[]) => {
+    if (!donoId) return;
+    try {
+      await rhContactService.sync(donoId, novosContatos);
+      setContatosRhGlobais(novosContatos);
+    } catch (e: any) {
+      console.error("Erro ao sincronizar contatos de RH:", e);
+      alert("Erro ao salvar contatos globais no servidor.");
+    }
+  };
+
   const alternarPresenca = async (id: string, ocorrencia: OcorrenciaFrequencia, observacao?: string, statusGeral?: StatusFuncionario, arquivo?: File) => {
     if (!donoId) return;
     try {
@@ -113,10 +145,12 @@ export const useAppData = (
     escolas,
     setores,
     funcoes,
+    contatosRhGlobais,
     salvarFuncionario,
     removerFuncionario,
     salvarEscola,
     removerEscola,
+    salvarContatosGlobais,
     alternarPresenca,
     importarEmLote,
     adicionarSetor,

@@ -10,18 +10,17 @@ interface SchoolPortalProps {
   onEditEmployee?: (emp: Funcionario) => void;
   onUpdateSchoolNotes?: (notes: string) => void;
   onUpdateLogo?: (file: File) => void;
-  onUpdateRhContacts?: (contacts: RhContact[]) => void;
+  rhContacts?: RhContact[]; // Contatos globais vindos do perfil RH
 }
 
 const SchoolPortal: React.FC<SchoolPortalProps> = ({ 
   school, employees, onToggleAttendance, isAdminView, onEditEmployee, 
-  onUpdateSchoolNotes, onUpdateLogo, onUpdateRhContacts 
+  onUpdateSchoolNotes, onUpdateLogo, rhContacts = []
 }) => {
   const [modalFalta, setModalFalta] = useState<Funcionario | null>(null);
   const [obsFalta, setObsFalta] = useState('');
   const [editNotes, setEditNotes] = useState(false);
   const [tempNotes, setTempNotes] = useState(school.notasUnidade || '');
-  const [isEditingContacts, setIsEditingContacts] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,24 +32,6 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
     if (e.target.files?.[0]) {
       onUpdateLogo?.(e.target.files[0]);
     }
-  };
-
-  const handleRhContactChange = (idx: number, field: keyof RhContact, value: string) => {
-    const newContacts = [...(school.contatosRh || [])];
-    if (newContacts[idx]) {
-        (newContacts[idx] as any)[field] = value;
-        onUpdateRhContacts?.(newContacts);
-    }
-  };
-
-  const addRhContact = () => {
-    const newContacts = [...(school.contatosRh || []), { label: 'Novo Contato', value: '', type: 'phone' as const }];
-    onUpdateRhContacts?.(newContacts);
-  };
-
-  const removeRhContact = (idx: number) => {
-    const newContacts = (school.contatosRh || []).filter((_, i) => i !== idx);
-    onUpdateRhContacts?.(newContacts);
   };
 
   const groupedBySector = employeesArray.reduce((acc, emp) => {
@@ -179,11 +160,10 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
             <div className="mt-8 pt-8 border-t border-slate-100">
                <div className="flex justify-between items-center mb-6">
                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contatos Rápidos RH</h4>
-                   <button onClick={() => setIsEditingContacts(!isEditingContacts)} className="text-[10px] font-bold text-indigo-600">{isEditingContacts ? 'Finalizar' : 'Editar'}</button>
                </div>
                
                <div className="space-y-4">
-                  {(school.contatosRh || []).map((c, idx) => (
+                  {(rhContacts).map((c, idx) => (
                       <div key={idx} className="group relative p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.type === 'email' ? 'bg-sky-100 text-sky-600' : 'bg-emerald-100 text-emerald-600'}`}>
                            {c.type === 'email' ? (
@@ -193,32 +173,13 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
                            )}
                         </div>
                         <div className="flex-1 min-w-0">
-                           {isEditingContacts ? (
-                               <input 
-                                 className="w-full text-xs font-black bg-white border border-slate-200 rounded px-2 py-1"
-                                 value={c.label}
-                                 onChange={e => handleRhContactChange(idx, 'label', e.target.value)}
-                               />
-                           ) : (
-                               <p className="text-[10px] font-black text-slate-800 uppercase truncate">{c.label}</p>
-                           )}
-                           {isEditingContacts ? (
-                               <input 
-                                 className="w-full text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded px-2 py-1 mt-1"
-                                 value={c.value}
-                                 onChange={e => handleRhContactChange(idx, 'value', e.target.value)}
-                               />
-                           ) : (
-                               <p className="text-xs font-bold text-slate-500 truncate">{c.value}</p>
-                           )}
+                           <p className="text-[10px] font-black text-slate-800 uppercase truncate">{c.label}</p>
+                           <p className="text-xs font-bold text-slate-500 truncate">{c.value}</p>
                         </div>
-                        {isEditingContacts && (
-                            <button onClick={() => removeRhContact(idx)} className="text-rose-400 hover:text-rose-600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
-                        )}
                       </div>
                   ))}
-                  {isEditingContacts && (
-                      <button onClick={addRhContact} className="w-full py-3 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 uppercase hover:border-indigo-400 hover:text-indigo-500 transition">+ Adicionar Contato</button>
+                  {rhContacts.length === 0 && (
+                     <p className="text-[10px] text-slate-400 italic text-center">Nenhum contato configurado pelo RH.</p>
                   )}
                </div>
             </div>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabase.ts';
 import { authService } from '../services/auth.service.ts';
 import { Usuario } from '../types.ts';
@@ -9,13 +10,14 @@ export const useAuth = () => {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [authError, setAuthError] = useState('');
+  const initialized = useRef(false);
 
-  const carregarSessao = async () => {
+  const carregarSessao = async (sessionToUse?: any) => {
     try {
-      const user = await authService.getSessionUser();
+      const user = await authService.getSessionUser(sessionToUse);
       setUsuario(user);
     } catch (e) {
-      console.error("Erro ao carregar sessão inicial:", e);
+      console.error("Falha ao carregar sessão:", e);
       setUsuario(null);
     } finally {
       setLoadingSession(false);
@@ -23,24 +25,19 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
-    // Timeout de segurança: se o Supabase não responder em 4s, libera a tela para o modo manual/demo
+    if (initialized.current) return;
+    initialized.current = true;
+
+    // Timeout de segurança para evitar tela de loading infinita
     const timer = setTimeout(() => {
-      if (loadingSession) {
-        console.warn("Auth timeout atingido. Liberando tela para evitar hang.");
-        setLoadingSession(false);
-      }
-    }, 4000);
+      setLoadingSession(false);
+    }, 5000);
 
     carregarSessao();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        try {
-          const user = await authService.getSessionUser(session);
-          setUsuario(user);
-        } finally {
-          setLoadingSession(false);
-        }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        carregarSessao(session);
       } else if (event === 'SIGNED_OUT') {
         setUsuario(null);
         setLoadingSession(false);
@@ -58,13 +55,14 @@ export const useAuth = () => {
     try {
       const result = await authService.loginAdmin(email, pass, isSignUp);
       if (result.success) {
-          const user = await authService.getSessionUser();
-          setUsuario(user);
+          // Pequeno delay para o Supabase propagar a sessão antes da recarga
+          setTimeout(() => carregarSessao(), 500);
       }
       return result;
     } catch (e: any) {
-      setAuthError(e.message || "Erro de autenticação");
-      return { success: false };
+      const msg = e.message || "Erro de autenticação";
+      setAuthError(msg);
+      return { success: false, error: msg };
     }
   };
 
@@ -73,12 +71,13 @@ export const useAuth = () => {
     try {
       const result = await authService.loginEscola(codigoGestor, codigoAcesso);
       if (result.success && result.user) {
-        setUsuario(result.user as Usuario);
+        setUsuario(result.user);
       }
       return result;
     } catch (e: any) {
-      setAuthError(e.message || "Credenciais da unidade inválidas");
-      return { success: false };
+      const msg = e.message || "Credenciais inválidas";
+      setAuthError(msg);
+      return { success: false, error: msg };
     }
   };
   
@@ -92,20 +91,29 @@ export const useAuth = () => {
   };
 
   const logout = async () => {
+    setLoadingSession(true);
     try {
         await authService.logout();
-    } catch (e) {
-        console.warn("Logout falhou:", e);
     } finally {
-        localStorage.removeItem(FALLBACK_KEY);
         setUsuario(null);
         setAuthError('');
         setLoadingSession(false);
+        // Limpa URL de possíveis tokens de hash após logout
         if (window.history.replaceState) {
-            window.history.replaceState(null, '');
+            window.history.replaceState(null, '', window.location.pathname);
         }
     }
   };
 
-  return { usuario, setUsuario, loadingSession, authError, setAuthError, loginAdmin, loginEscola, loginGoogle, logout };
+  return { 
+    usuario, 
+    setUsuario, 
+    loadingSession, 
+    authError, 
+    setAuthError, 
+    loginAdmin, 
+    loginEscola, 
+    loginGoogle, 
+    logout 
+  };
 };

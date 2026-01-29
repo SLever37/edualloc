@@ -20,52 +20,87 @@ export const authService = {
     let session = currentSession;
     try {
         if (!session) {
-            const { data, error } = await supabase.auth.getSession();
-            if (!error) session = data.session;
+            const { data } = await supabase.auth.getSession();
+            session = data.session;
         }
     } catch (e) {
-        console.error("Erro ao verificar sessão:", e);
+        console.error("Erro ao buscar sessão ativa:", e);
     }
 
-    if (session?.user) {
-      let { data: perfilData, error } = await supabase
+    if (!session?.user) return null;
+
+    const authUser = session.user;
+    const meta = authUser.user_metadata || {};
+
+    // Objeto padrão caso o banco falhe
+    const usuarioBase: Usuario = {
+      id: authUser.id,
+      nome: meta.full_name || meta.name || authUser.email?.split('@')[0] || 'Usuário',
+      email: authUser.email || '',
+      perfil: (meta.perfil as Perfil) || Perfil.ADMINISTRADOR,
+      donoId: meta.dono_id || authUser.id,
+      escolaId: meta.escola_id || null
+    };
+
+    try {
+      // 1. Tentar ler perfil existente
+      const { data: perfilData, error: readError } = await supabase
         .from('perfis')
         .select('*')
-        .eq('id', session.user.id)
-        .single();
+        .eq('id', authUser.id)
+        .maybeSingle();
 
-      if (error || !perfilData) {
-         const meta = session.user.user_metadata || {};
-         const novoPerfil = {
-           id: session.user.id,
-           nome: meta.full_name || meta.name || session.user.email?.split('@')[0] || 'Usuário',
-           email: session.user.email || '',
-           perfil: (meta.perfil as Perfil) || Perfil.ADMINISTRADOR,
-           dono_id: meta.dono_id || session.user.id,
-           escola_id: meta.escola_id || null
-         };
+      if (readError) throw readError;
 
-         const { data: created } = await supabase
-            .from('perfis')
-            .upsert(novoPerfil)
-            .select()
-            .single();
-         
-         perfilData = created || novoPerfil;
+      if (!perfilData) {
+        // 2. Se não existe, tentar criar um perfil mínimo
+        const novoPerfil = {
+          id: authUser.id,
+          nome: usuarioBase.nome,
+          email: usuarioBase.email,
+          perfil: usuarioBase.perfil,
+          dono_id: usuarioBase.donoId,
+          escola_id: usuarioBase.escolaId,
+          updated_at: new Date().toISOString()
+        };
+
+        const { data: created } = await supabase
+          .from('perfis')
+          .insert([novoPerfil])
+          .select()
+          .single();
+        
+        if (created) return {
+          ...usuarioBase,
+          nome: created.nome,
+          perfil: created.perfil as Perfil,
+          donoId: created.dono_id,
+          escolaId: created.escola_id
+        };
+      } else {
+        // 3. Se existe, tentar atualizar apenas o timestamp (sem bloquear se falhar)
+        // Usamos uma chamada sem 'await' crítico ou tratada para não barrar o login
+        supabase
+          .from('perfis')
+          .update({ last_active_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('id', authUser.id)
+          .then(({error}) => error && console.warn("Aviso: Falha ao atualizar timestamp do perfil", error.message));
+
+        return {
+          id: authUser.id,
+          nome: perfilData.nome || usuarioBase.nome,
+          email: perfilData.email || usuarioBase.email,
+          perfil: (perfilData.perfil as Perfil) || usuarioBase.perfil,
+          donoId: perfilData.dono_id || usuarioBase.donoId,
+          escolaId: perfilData.escola_id || usuarioBase.escolaId
+        };
       }
-
-      return {
-        id: session.user.id,
-        nome: perfilData.nome,
-        email: perfilData.email,
-        perfil: perfilData.perfil as Perfil,
-        donoId: perfilData.dono_id,
-        escolaId: perfilData.escola_id
-      };
+    } catch (err) {
+      console.error("Erro na sincronização de perfil (mantendo login com metadados):", err);
     }
 
-    const fallbackData = localStorage.getItem(FALLBACK_KEY);
-    return fallbackData ? JSON.parse(fallbackData) : null;
+    // Retorna o base se o fluxo do banco falhar, garantindo o login
+    return usuarioBase;
   },
 
   async loginEscola(codigoGestor: string, codigoAcesso: string) {
@@ -90,7 +125,7 @@ export const authService = {
       .single();
 
     if (error || !escola) {
-      throw new Error("Código de Gestor ou Senha de Acesso inválidos.");
+      throw new Error("Credenciais da unidade inválidas ou não encontradas.");
     }
 
     const gestorUser: Usuario = {
@@ -123,7 +158,13 @@ export const authService = {
       const { data, error } = await supabase.auth.signUp({
         email, 
         password: pass,
-        options: { data: { full_name: email.split('@')[0], perfil: Perfil.ADMINISTRADOR } }
+        options: { 
+          data: { 
+            full_name: email.split('@')[0], 
+            perfil: Perfil.ADMINISTRADOR,
+            dono_id: null // Será gerado como o próprio ID no getSessionUser
+          } 
+        }
       });
       if (error) throw error;
       return { success: true, user: data.user };
@@ -146,8 +187,12 @@ export const authService = {
   async logout() {
     localStorage.removeItem(FALLBACK_KEY);
     localStorage.removeItem(FORCE_DEMO_KEY);
-    if (isSupabaseConfigured()) {
-        await supabase.auth.signOut();
+    try {
+      if (isSupabaseConfigured()) {
+          await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.warn("Erro ao deslogar do Supabase:", e);
     }
   }
 };

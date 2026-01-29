@@ -116,6 +116,7 @@ export interface Funcionario {
 }
 
 export interface RhContact {
+  id?: string;
   label: string;
   value: string;
   type: 'phone' | 'email';
@@ -132,7 +133,6 @@ export interface Escola {
   donoId: string;
   notasUnidade?: string;
   logoUrl?: string;
-  contatosRh?: RhContact[];
 }
 
 export interface Usuario {
