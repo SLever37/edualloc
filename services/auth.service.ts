@@ -32,7 +32,6 @@ export const authService = {
     const authUser = session.user;
     const meta = authUser.user_metadata || {};
 
-    // Objeto padrão caso o banco falhe
     const usuarioBase: Usuario = {
       id: authUser.id,
       nome: meta.full_name || meta.name || authUser.email?.split('@')[0] || 'Usuário',
@@ -43,7 +42,6 @@ export const authService = {
     };
 
     try {
-      // 1. Tentar ler perfil existente
       const { data: perfilData, error: readError } = await supabase
         .from('perfis')
         .select('*')
@@ -53,7 +51,6 @@ export const authService = {
       if (readError) throw readError;
 
       if (!perfilData) {
-        // 2. Se não existe, tentar criar um perfil mínimo
         const novoPerfil = {
           id: authUser.id,
           nome: usuarioBase.nome,
@@ -78,8 +75,6 @@ export const authService = {
           escolaId: created.escola_id
         };
       } else {
-        // 3. Se existe, tentar atualizar apenas o timestamp (sem bloquear se falhar)
-        // Usamos uma chamada sem 'await' crítico ou tratada para não barrar o login
         supabase
           .from('perfis')
           .update({ last_active_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -96,10 +91,9 @@ export const authService = {
         };
       }
     } catch (err) {
-      console.error("Erro na sincronização de perfil (mantendo login com metadados):", err);
+      console.error("Erro na sincronização de perfil:", err);
     }
 
-    // Retorna o base se o fluxo do banco falhar, garantindo o login
     return usuarioBase;
   },
 
@@ -162,15 +156,25 @@ export const authService = {
           data: { 
             full_name: email.split('@')[0], 
             perfil: Perfil.ADMINISTRADOR,
-            dono_id: null // Será gerado como o próprio ID no getSessionUser
+            dono_id: null 
           } 
         }
       });
-      if (error) throw error;
+      if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+              throw new Error("Credenciais de login inválidas.");
+          }
+          throw error;
+      }
       return { success: true, user: data.user };
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) throw error;
+      if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+              throw new Error("Credenciais de login inválidas.");
+          }
+          throw error;
+      }
       return { success: true, user: data.user };
     }
   },
@@ -192,7 +196,7 @@ export const authService = {
           await supabase.auth.signOut();
       }
     } catch (e) {
-      console.warn("Erro ao deslogar do Supabase:", e);
+      console.warn("Erro ao deslogar:", e);
     }
   }
 };

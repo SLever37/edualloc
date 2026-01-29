@@ -1,10 +1,8 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { authService } from '../services/auth.service';
 
 interface MainLoginViewProps {
-  // Fix: changed Promise<void> to Promise<any> to match the actual return type of loginAdmin from useAuth, as the return value is not used in this component.
   onAdminLogin: (email: string, pass: string, isSignUp: boolean) => Promise<any>;
   loading: boolean;
   error: string;
@@ -48,7 +46,8 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
   };
 
   const isLoadingAny = loading || googleLoading;
-  const isConfigError = error.includes('confirmado') || error.includes('not confirmed') || error.includes('disabled');
+  // Traduções para detecção de erros comuns do Supabase
+  const isEmailNotConfirmed = error.includes('confirmado') || error.includes('not confirmed') || error.includes('Email not confirmed');
 
   return (
     <div className="h-full w-full bg-slate-950 flex flex-col items-center justify-center p-4 relative font-sans overflow-y-auto custom-scrollbar">
@@ -106,7 +105,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                             <path d="M5.27 14.59C5.02 13.85 4.88 13.06 4.88 12.25C4.88 11.44 5.02 10.65 5.27 9.91L5.26 9.76L1.51 6.86L1.46 6.96C0.53 8.81 0 10.9 0 13C0 15.1 0.53 17.19 1.46 19.04L5.27 14.59Z" fill="#FBBC05"/>
                             <path d="M12 4.96999C14.23 4.96999 15.75 5.92999 16.61 6.72999L19.89 3.51999C17.84 1.61999 15.17 0.469986 12 0.469986C7.37 0.469986 3.33 2.93999 1.36 6.84999L5.17 9.80999C6.16 6.97999 8.85 4.96999 12 4.96999Z" fill="#EA4335"/>
                         </svg>
-                        <span className="text-sm">Google</span>
+                        <span className="text-sm">Entrar com Google</span>
                     </>
                 )}
             </button>
@@ -143,12 +142,12 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
 
                 {error && (
                     <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-[11px] font-bold leading-relaxed animate-in slide-in-from-top-2">
-                        {error}
-                        {isConfigError && (
+                        {error === 'Invalid login credentials' ? 'Credenciais de login inválidas.' : error}
+                        {isEmailNotConfirmed && (
                             <div className="mt-3 p-3 bg-white/50 rounded-xl border border-rose-200">
                                 <p className="text-[10px] font-black uppercase text-indigo-600 mb-1">Como resolver:</p>
                                 <p className="text-[10px] text-slate-500 font-medium mb-3 leading-tight">
-                                    No painel Supabase, vá em <strong>Auth {' > '} Providers {' > '} Email</strong> e desative <strong>"Confirm Email"</strong>.
+                                    O e-mail ainda não foi confirmado ou as credenciais estão incorretas. Verifique sua caixa de entrada.
                                 </p>
                                 <button 
                                     type="button"
@@ -167,7 +166,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                     disabled={isLoadingAny}
                     className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl transition-all transform active:scale-95 disabled:opacity-50"
                 >
-                    {loading ? 'Aguarde...' : (isSignUp ? 'Criar Conta' : 'Entrar')}
+                    {loading ? 'Aguarde...' : (isSignUp ? 'Criar Minha Conta' : 'Entrar no Sistema')}
                 </button>
 
                 <div className="text-center pt-2">
@@ -176,7 +175,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                         onClick={() => { setIsSignUp(!isSignUp); onClearMessages(); }} 
                         className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest p-2 transition-colors"
                     >
-                        {isSignUp ? 'Já tem conta? Login' : 'Novo aqui? Cadastrar'}
+                        {isSignUp ? 'Já possui conta? Clique aqui para entrar' : 'Ainda não tem conta? Cadastre-se'}
                     </button>
                 </div>
             </form>
@@ -185,7 +184,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
       </div>
       
       <p className="mt-8 text-slate-500 text-[10px] font-bold opacity-40 uppercase tracking-widest">
-        EduAlloc RH • v2.0
+        EduAlloc RH • v2.0 • Português (Brasil)
       </p>
     </div>
   );

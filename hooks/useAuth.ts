@@ -28,7 +28,6 @@ export const useAuth = () => {
     if (initialized.current) return;
     initialized.current = true;
 
-    // Timeout de segurança para evitar tela de loading infinita
     const timer = setTimeout(() => {
       setLoadingSession(false);
     }, 5000);
@@ -55,12 +54,12 @@ export const useAuth = () => {
     try {
       const result = await authService.loginAdmin(email, pass, isSignUp);
       if (result.success) {
-          // Pequeno delay para o Supabase propagar a sessão antes da recarga
           setTimeout(() => carregarSessao(), 500);
       }
       return result;
     } catch (e: any) {
-      const msg = e.message || "Erro de autenticação";
+      let msg = e.message || "Erro de autenticação";
+      if (msg.includes("Invalid login credentials")) msg = "Credenciais de login inválidas.";
       setAuthError(msg);
       return { success: false, error: msg };
     }
@@ -75,7 +74,7 @@ export const useAuth = () => {
       }
       return result;
     } catch (e: any) {
-      const msg = e.message || "Credenciais inválidas";
+      const msg = e.message || "Credenciais da unidade inválidas.";
       setAuthError(msg);
       return { success: false, error: msg };
     }
@@ -86,7 +85,7 @@ export const useAuth = () => {
     try {
         await authService.loginWithGoogle();
     } catch (e: any) {
-        setAuthError(e.message || "Erro ao conectar com Google");
+        setAuthError(e.message || "Erro ao conectar com a conta Google.");
     }
   };
 
@@ -98,7 +97,6 @@ export const useAuth = () => {
         setUsuario(null);
         setAuthError('');
         setLoadingSession(false);
-        // Limpa URL de possíveis tokens de hash após logout
         if (window.history.replaceState) {
             window.history.replaceState(null, '', window.location.pathname);
         }
