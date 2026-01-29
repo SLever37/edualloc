@@ -152,7 +152,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                             <div className="mt-3 p-3 bg-white/50 rounded-xl border border-rose-200">
                                 <p className="text-[10px] font-black uppercase text-indigo-600 mb-1">Como resolver:</p>
                                 <p className="text-[10px] text-slate-500 font-medium mb-3 leading-tight">
-                                    No painel Supabase, vá em <strong>Auth > Providers > Email</strong> e desative <strong>"Confirm Email"</strong>.
+                                    No painel Supabase, vá em <strong>Auth &gt; Providers &gt; Email</strong> e desative <strong>"Confirm Email"</strong>.
                                 </p>
                                 <button 
                                     type="button"
