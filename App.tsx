@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Funcionario, Escola, Perfil } from './types';
 import { useAuth } from './hooks/useAuth';
@@ -17,6 +18,7 @@ import SchoolDirectLoginView from './views/SchoolDirectLoginView';
 import MainLoginView from './views/MainLoginView';
 import UsuariosView from './views/UsuariosView';
 import PerfilView from './views/PerfilView';
+import AuthCallbackView from './views/AuthCallbackView';
 
 const App: React.FC = () => {
   const { 
@@ -29,6 +31,7 @@ const App: React.FC = () => {
   const [isRestrictedPortal, setIsRestrictedPortal] = useState(false);
   const [portalCodeFromUrl, setPortalCodeFromUrl] = useState('');
   const [dbStatus, setDbStatus] = useState<{ok: boolean, message: string} | null>(null);
+  const [isOAuthCallback, setIsOAuthCallback] = useState(false);
   
   const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState<Funcionario | undefined>();
   const [escolaEmEdicao, setEscolaEmEdicao] = useState<Escola | undefined>();
@@ -44,15 +47,19 @@ const App: React.FC = () => {
   } = useAppData(usuario?.id, usuario?.donoId, usuario?.perfil);
 
   useEffect(() => {
-    // Diagnóstico rápido ao iniciar
     const checkDb = async () => {
         const status = await checkDatabaseConnection();
         setDbStatus(status);
-        if (!status.ok) {
-            console.error("Supabase Connection Issue:", status.message);
-        }
     };
     checkDb();
+
+    // Detectar se voltamos de um OAuth (Supabase usa fragmento #access_token=...)
+    const hash = window.location.hash;
+    if (hash.includes('access_token=') || hash.includes('type=recovery') || hash.includes('type=signup')) {
+      setIsOAuthCallback(true);
+      // Limpa a URL após detecção (opcional, Supabase JS SDK lida com isso)
+      // mas para UX é melhor mostrar o loader e depois limpar.
+    }
 
     const params = new URLSearchParams(window.location.search);
     const portalCode = params.get('portal');
@@ -61,6 +68,15 @@ const App: React.FC = () => {
       setIsRestrictedPortal(true);
     }
   }, []);
+
+  // Limpa o estado de callback quando o usuário é carregado
+  useEffect(() => {
+    if (usuario && isOAuthCallback) {
+      setIsOAuthCallback(false);
+      // Limpa hash da URL sem recarregar
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, [usuario, isOAuthCallback]);
 
   useEffect(() => {
     if (usuario) {
@@ -97,11 +113,12 @@ const App: React.FC = () => {
 
   const adicionarMembroEquipe = async (email: string, pass: string, nome: string) => {
       if(!usuario?.donoId) return;
-      alert("Recurso disponível em breve. Use o painel de Auth do Supabase por enquanto.");
+      alert("Recurso disponível em breve.");
   };
 
-  if (loadingSession) {
-    return (
+  // Se estiver carregando a sessão ou processando OAuth, mostra loader
+  if (loadingSession || (isOAuthCallback && !usuario)) {
+    return isOAuthCallback ? <AuthCallbackView /> : (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
             <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-[2rem] animate-spin mb-8"></div>
             <p className="text-slate-400 font-black text-xs uppercase tracking-[0.4em] animate-pulse">Sincronizando Rede...</p>
@@ -109,7 +126,6 @@ const App: React.FC = () => {
     );
   }
 
-  // LOGIN SCREEN
   if (!usuario) {
     if (isRestrictedPortal) {
       return (
@@ -132,10 +148,8 @@ const App: React.FC = () => {
     );
   }
 
-  // MAIN APP
   return (
     <Layout user={usuario} onLogout={logout} onNavigate={(view) => navegarPara(view)} activeView={visaoAtiva}>
-      {/* Alerta de Banco de Dados se não estiver OK */}
       {dbStatus && !dbStatus.ok && visaoAtiva === 'dashboard' && (
           <div className="mb-8 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-4 text-rose-800 animate-in slide-in-from-top-4">
               <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 shrink-0">

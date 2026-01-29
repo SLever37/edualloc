@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/auth.service';
@@ -39,28 +40,22 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
 
   const handleDemoMode = async () => {
     onClearMessages();
-    // Limpa estados de auth anteriores para evitar conflitos
     localStorage.removeItem('sb-bucutqjribdrqkvwmxbb-auth-token'); 
     localStorage.setItem('edualloc_force_demo', 'true');
     await onAdminLogin('demo@edualloc.app', 'demo123', false);
-    // Recarrega para garantir que os hooks de auth peguem a mudança de estado local
     window.location.reload();
   };
 
   const isLoadingAny = loading || googleLoading;
-
-  // Verifica se o erro é relacionado a configuração do Supabase
   const isConfigError = error.includes('confirmado') || error.includes('not confirmed') || error.includes('disabled');
 
   return (
     <div className="h-full w-full bg-slate-950 flex flex-col items-center justify-center p-4 relative font-sans overflow-y-auto custom-scrollbar">
-      {/* Background Decorativo */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
           <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-indigo-600 rounded-full opacity-10 blur-[150px] animate-pulse"></div>
           <div className="absolute bottom-[-20%] left-[-10%] w-[800px] h-[800px] bg-emerald-600 rounded-full opacity-10 blur-[150px] animate-pulse" style={{animationDelay: '1s'}}></div>
       </div>
 
-      {/* Banner de Atalho Demo (Sempre visível para facilitar) */}
       <div className="relative z-50 mb-6 w-full max-w-md animate-in slide-in-from-top-4 duration-700">
           <button 
             onClick={handleDemoMode}
@@ -152,7 +147,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                             <div className="mt-3 p-3 bg-white/50 rounded-xl border border-rose-200">
                                 <p className="text-[10px] font-black uppercase text-indigo-600 mb-1">Como resolver:</p>
                                 <p className="text-[10px] text-slate-500 font-medium mb-3 leading-tight">
-                                    No painel Supabase, vá em <strong>Auth &gt; Providers &gt; Email</strong> e desative <strong>"Confirm Email"</strong>.
+                                    No painel Supabase, vá em <strong>Auth {' > '} Providers {' > '} Email</strong> e desative <strong>"Confirm Email"</strong>.
                                 </p>
                                 <button 
                                     type="button"

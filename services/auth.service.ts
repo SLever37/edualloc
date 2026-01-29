@@ -1,3 +1,4 @@
+
 import { supabase, isSupabaseConfigured } from './supabase';
 import { Perfil, Usuario } from '../types';
 import { Session } from '@supabase/supabase-js';
@@ -145,9 +146,16 @@ export const authService = {
 
   async loginWithGoogle() {
     if (this.isDemoMode()) return null;
+    // redirectTo aponta para a raiz para capturar o callback
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: { 
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        }
+      }
     });
     if (error) throw error;
     return data;
