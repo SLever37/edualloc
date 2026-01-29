@@ -11,6 +11,11 @@ export const authService = {
     return localStorage.getItem(FORCE_DEMO_KEY) === 'true' || !isSupabaseConfigured();
   },
 
+  setDemoMode(active: boolean) {
+    if (active) localStorage.setItem(FORCE_DEMO_KEY, 'true');
+    else localStorage.removeItem(FORCE_DEMO_KEY);
+  },
+
   async getSessionUser(currentSession?: Session | null): Promise<Usuario | null> {
     if (this.isDemoMode()) {
         const fallbackData = localStorage.getItem(FALLBACK_KEY);
@@ -41,17 +46,26 @@ export const authService = {
            nome: meta.full_name || meta.name || session.user.email?.split('@')[0] || 'Usuário',
            email: session.user.email || '',
            perfil: (meta.perfil as Perfil) || Perfil.ADMINISTRADOR,
-           dono_id: meta.dono_id || session.user.id,
-           escola_id: meta.escola_id || null
+           dono_id: meta.dono_id || session.user.id
          };
 
-         const { data: created } = await supabase
+         const { data: created, error: createError } = await supabase
             .from('perfis')
             .upsert(novoPerfil)
             .select()
             .single();
          
-         perfilData = created || novoPerfil;
+         if (!createError) {
+             perfilData = created;
+         } else {
+             return {
+                id: session.user.id,
+                nome: novoPerfil.nome,
+                email: novoPerfil.email,
+                perfil: novoPerfil.perfil,
+                donoId: novoPerfil.dono_id
+             };
+         }
       }
 
       return {
@@ -68,48 +82,6 @@ export const authService = {
     return fallbackData ? JSON.parse(fallbackData) : null;
   },
 
-  async loginEscola(codigoGestor: string, codigoAcesso: string) {
-    if (this.isDemoMode()) {
-      // Mock para modo demo
-      const user: Usuario = {
-        id: 'demo-gestor',
-        nome: 'Gestor Unidade (Demo)',
-        email: `${codigoGestor.toLowerCase()}@edualloc.app`,
-        perfil: Perfil.GESTOR_ESCOLAR,
-        donoId: 'demo-org-local',
-        escolaId: '1'
-      };
-      localStorage.setItem(FALLBACK_KEY, JSON.stringify(user));
-      return { success: true, user };
-    }
-
-    // Busca a escola pelos códigos
-    const { data: escola, error } = await supabase
-      .from('escolas')
-      .select('*')
-      .eq('codigo_gestor', codigoGestor)
-      .eq('codigo_acesso', codigoAcesso)
-      .single();
-
-    if (error || !escola) {
-      throw new Error("Código de Gestor ou Senha de Acesso inválidos para esta unidade.");
-    }
-
-    // Cria um usuário "virtual" para o gestor se não estiver usando Supabase Auth real para eles
-    // Ou você pode ter um usuário real com email gestor_ID@edualloc.app
-    const gestorUser: Usuario = {
-      id: `gestor-${escola.id}`,
-      nome: `Gestor ${escola.nome}`,
-      email: `${escola.codigo_gestor.toLowerCase()}@edualloc.app`,
-      perfil: Perfil.GESTOR_ESCOLAR,
-      donoId: escola.dono_id,
-      escolaId: escola.id
-    };
-
-    localStorage.setItem(FALLBACK_KEY, JSON.stringify(gestorUser));
-    return { success: true, user: gestorUser };
-  },
-
   async loginAdmin(email: string, pass: string, isSignUp: boolean) {
     if (this.isDemoMode()) {
         const fallbackUser: Usuario = {
@@ -123,25 +95,67 @@ export const authService = {
         return { success: true, user: fallbackUser };
     }
 
-    if (isSignUp) {
-      const { data, error } = await supabase.auth.signUp({
-        email, 
-        password: pass,
-        options: { data: { full_name: email.split('@')[0], perfil: Perfil.ADMINISTRADOR } }
-      });
-      if (error) throw error;
-      return { success: true, user: data.user };
-    } else {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) throw error;
-      return { success: true, user: data.user };
+    try {
+        if (isSignUp) {
+          const { data, error } = await supabase.auth.signUp({
+            email, 
+            password: pass,
+            options: { 
+              data: { 
+                full_name: email.split('@')[0], 
+                perfil: Perfil.ADMINISTRADOR,
+                dono_id: null 
+              } 
+            }
+          });
+          if (error) throw error;
+          
+          if (data.user) {
+            await supabase.from('perfis').upsert({
+              id: data.user.id,
+              nome: email.split('@')[0],
+              email: email,
+              perfil: Perfil.ADMINISTRADOR,
+              dono_id: data.user.id
+            });
+          }
+          return { success: true, user: data.user };
+        } else {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+          if (error) throw error;
+          return { success: true, user: data.user };
+        }
+    } catch (e: any) {
+        const msg = e.message || '';
+        
+        if (msg.includes('Email logins are disabled')) {
+            throw new Error("Login por e-mail desativado no Supabase. Ative em 'Authentication > Providers' ou use o Modo Demo.");
+        }
+        
+        if (msg.includes('Email not confirmed')) {
+            throw new Error("E-mail ainda não confirmado. Verifique sua caixa de entrada ou desative a confirmação obrigatória nas configurações de 'Auth' do Supabase.");
+        }
+
+        if (msg.includes('Invalid login credentials')) {
+            throw new Error("E-mail ou senha incorretos.");
+        }
+
+        throw e;
     }
   },
 
   async loginWithGoogle() {
+    if (this.isDemoMode()) return null;
+    // redirectTo aponta para a raiz para capturar o callback
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: { 
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        }
+      }
     });
     if (error) throw error;
     return data;

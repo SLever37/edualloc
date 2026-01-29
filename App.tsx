@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Funcionario, Escola, Perfil } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useAppData } from './hooks/useAppData';
@@ -23,7 +23,7 @@ import AuthCallbackView from './views/AuthCallbackView';
 const App: React.FC = () => {
   const { 
     usuario, loadingSession, authError, setAuthError, 
-    loginAdmin, loginEscola, logout 
+    loginAdmin, logout 
   } = useAuth();
 
   const [visaoAtiva, setVisaoAtiva] = useState<string>('dashboard');
@@ -31,12 +31,8 @@ const App: React.FC = () => {
   const [isRestrictedPortal, setIsRestrictedPortal] = useState(false);
   const [portalCodeFromUrl, setPortalCodeFromUrl] = useState('');
   const [dbStatus, setDbStatus] = useState<{ok: boolean, message: string} | null>(null);
+  const [isOAuthCallback, setIsOAuthCallback] = useState(false);
   
-  const isOAuthCallback = useMemo(() => {
-    const hash = window.location.hash;
-    return hash.includes('access_token=') || hash.includes('type=recovery');
-  }, []);
-
   const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState<Funcionario | undefined>();
   const [escolaEmEdicao, setEscolaEmEdicao] = useState<Escola | undefined>();
   const [isModalFuncionarioAberto, setIsModalFuncionarioAberto] = useState(false);
@@ -51,7 +47,20 @@ const App: React.FC = () => {
   } = useAppData(usuario?.id, usuario?.donoId, usuario?.perfil);
 
   useEffect(() => {
-    checkDatabaseConnection().then(setDbStatus);
+    const checkDb = async () => {
+        const status = await checkDatabaseConnection();
+        setDbStatus(status);
+    };
+    checkDb();
+
+    // Detectar se voltamos de um OAuth (Supabase usa fragmento #access_token=...)
+    const hash = window.location.hash;
+    if (hash.includes('access_token=') || hash.includes('type=recovery') || hash.includes('type=signup')) {
+      setIsOAuthCallback(true);
+      // Limpa a URL após detecção (opcional, Supabase JS SDK lida com isso)
+      // mas para UX é melhor mostrar o loader e depois limpar.
+    }
+
     const params = new URLSearchParams(window.location.search);
     const portalCode = params.get('portal');
     if (portalCode) {
@@ -60,10 +69,33 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Limpa o estado de callback quando o usuário é carregado
+  useEffect(() => {
+    if (usuario && isOAuthCallback) {
+      setIsOAuthCallback(false);
+      // Limpa hash da URL sem recarregar
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, [usuario, isOAuthCallback]);
+
+  useEffect(() => {
+    if (usuario) {
+      window.history.replaceState({ view: 'dashboard' }, '');
+      const handlePopState = (event: PopStateEvent) => {
+        if (event.state?.view) {
+          setVisaoAtiva(event.state.view);
+          if (event.state.escolaId) setIdEscolaSelecionada(event.state.escolaId);
+        }
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, [usuario]);
+
   useEffect(() => {
       if(usuario?.perfil === Perfil.GESTOR_ESCOLAR && usuario.escolaId) {
           setIdEscolaSelecionada(usuario.escolaId);
-          setVisaoAtiva('portal-escola');
+          navegarPara('portal-escola', usuario.escolaId);
       }
   }, [usuario]);
 
@@ -73,17 +105,23 @@ const App: React.FC = () => {
     window.history.pushState({ view, escolaId }, '');
   };
 
-  const handleSchoolLogin = async (code: string, pass: string) => {
+  const handleAdminLogin = async (email: string, pass: string, isSignUp: boolean) => {
     setLoadingAuthAction(true);
-    await loginEscola(code, pass);
+    await loginAdmin(email, pass, isSignUp);
     setLoadingAuthAction(false);
   };
 
+  const adicionarMembroEquipe = async (email: string, pass: string, nome: string) => {
+      if(!usuario?.donoId) return;
+      alert("Recurso disponível em breve.");
+  };
+
+  // Se estiver carregando a sessão ou processando OAuth, mostra loader
   if (loadingSession || (isOAuthCallback && !usuario)) {
     return isOAuthCallback ? <AuthCallbackView /> : (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
             <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-[2rem] animate-spin mb-8"></div>
-            <p className="text-slate-400 font-black text-xs uppercase tracking-[0.4em] animate-pulse text-center px-4">Sincronizando Rede...</p>
+            <p className="text-slate-400 font-black text-xs uppercase tracking-[0.4em] animate-pulse">Sincronizando Rede...</p>
         </div>
     );
   }
@@ -93,7 +131,7 @@ const App: React.FC = () => {
       return (
         <SchoolDirectLoginView 
           schoolCode={portalCodeFromUrl} 
-          onLogin={handleSchoolLogin} 
+          onLogin={async () => {}} 
           onExit={() => setIsRestrictedPortal(false)} 
           loading={loadingAuthAction} 
           error={authError} 
@@ -102,7 +140,7 @@ const App: React.FC = () => {
     }
     return (
       <MainLoginView 
-        onAdminLogin={loginAdmin} 
+        onAdminLogin={handleAdminLogin} 
         loading={loadingAuthAction} 
         error={authError} 
         onClearMessages={() => setAuthError('')}
@@ -151,7 +189,7 @@ const App: React.FC = () => {
         />
       )}
       {visaoAtiva === 'users' && (
-        <UsuariosView currentUser={usuario} onRegisterTeamMember={async (e,p,n) => {}} />
+        <UsuariosView currentUser={usuario} onRegisterTeamMember={adicionarMembroEquipe} />
       )}
       {visaoAtiva === 'profile' && (
           <PerfilView user={usuario} onUpdateProfile={async () => {}} />
@@ -167,9 +205,6 @@ const App: React.FC = () => {
           onToggleAttendance={alternarPresenca}
           isAdminView={usuario.perfil === Perfil.ADMINISTRADOR || usuario.perfil === Perfil.SUPER_ADMIN}
           onEditEmployee={(f) => { setFuncionarioEmEdicao(f); setIsModalFuncionarioAberto(true); }}
-          onUpdateSchoolNotes={(notes) => salvarEscola({ id: idEscolaSelecionada, notasUnidade: notes })}
-          onUpdateLogo={(file) => salvarEscola({ id: idEscolaSelecionada }, file)}
-          onUpdateRhContacts={(contacts) => salvarEscola({ id: idEscolaSelecionada, contatosRh: contacts })}
         />
       )}
       {isModalFuncionarioAberto && (
