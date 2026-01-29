@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Funcionario, Escola, Perfil } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useAppData } from './hooks/useAppData';
@@ -31,8 +31,17 @@ const App: React.FC = () => {
   const [isRestrictedPortal, setIsRestrictedPortal] = useState(false);
   const [portalCodeFromUrl, setPortalCodeFromUrl] = useState('');
   const [dbStatus, setDbStatus] = useState<{ok: boolean, message: string} | null>(null);
-  const [isOAuthCallback, setIsOAuthCallback] = useState(false);
   
+  // Detecção imediata de callback para exibir AuthCallbackView antes mesmo da sessão carregar
+  const isOAuthCallback = useMemo(() => {
+    const hash = window.location.hash;
+    const search = window.location.search;
+    return hash.includes('access_token=') || 
+           hash.includes('type=recovery') || 
+           hash.includes('type=signup') ||
+           search.includes('code=');
+  }, []);
+
   const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState<Funcionario | undefined>();
   const [escolaEmEdicao, setEscolaEmEdicao] = useState<Escola | undefined>();
   const [isModalFuncionarioAberto, setIsModalFuncionarioAberto] = useState(false);
@@ -53,11 +62,6 @@ const App: React.FC = () => {
     };
     checkDb();
 
-    const hash = window.location.hash;
-    if (hash.includes('access_token=') || hash.includes('type=recovery') || hash.includes('type=signup')) {
-      setIsOAuthCallback(true);
-    }
-
     const params = new URLSearchParams(window.location.search);
     const portalCode = params.get('portal');
     if (portalCode) {
@@ -68,7 +72,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (usuario && isOAuthCallback) {
-      setIsOAuthCallback(false);
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }, [usuario, isOAuthCallback]);
@@ -112,7 +115,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Fix: added missing adicionarMembroEquipe function to handle team registration within the organization
   const adicionarMembroEquipe = async (email: string, pass: string, nome: string) => {
     if (!usuario) return;
     const { data, error } = await supabase.auth.signUp({

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { authService } from '../services/auth.service';
@@ -26,7 +27,8 @@ export const useAuth = () => {
     carregarSessao();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // INITIAL_SESSION garante que o carregamento termine assim que o Supabase estiver pronto
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         const user = await authService.getSessionUser(session);
         setUsuario(user);
         setLoadingSession(false);
@@ -74,10 +76,7 @@ export const useAuth = () => {
     } catch (e) {
         console.warn("Logout falhou:", e);
     } finally {
-        // CORREÇÃO CRÍTICA: Não usar localStorage.clear()
-        // Remove apenas as chaves de autenticação, preservando o "banco de dados" local
         localStorage.removeItem(FALLBACK_KEY);
-        // Limpa tokens do Supabase (chaves padrão do cliente auth)
         Object.keys(localStorage).forEach(key => {
             if (key.includes('supabase.auth.token')) {
                 localStorage.removeItem(key);
