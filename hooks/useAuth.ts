@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase.ts';
 import { authService } from '../services/auth.service.ts';
@@ -24,18 +23,17 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
-    // Timeout de segurança: se o Supabase não responder em 6s, libera o app
+    // Timeout de segurança: se o Supabase não responder em 4s, libera a tela para o modo manual/demo
     const timer = setTimeout(() => {
       if (loadingSession) {
-        console.warn("Auth timeout atingido. Liberando tela.");
+        console.warn("Auth timeout atingido. Liberando tela para evitar hang.");
         setLoadingSession(false);
       }
-    }, 6000);
+    }, 4000);
 
     carregarSessao();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.debug("Auth Event:", event);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         try {
           const user = await authService.getSessionUser(session);
@@ -100,12 +98,6 @@ export const useAuth = () => {
         console.warn("Logout falhou:", e);
     } finally {
         localStorage.removeItem(FALLBACK_KEY);
-        Object.keys(localStorage).forEach(key => {
-            if (key.includes('supabase.auth.token')) {
-                localStorage.removeItem(key);
-            }
-        });
-        
         setUsuario(null);
         setAuthError('');
         setLoadingSession(false);

@@ -1,9 +1,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Funcionario, Escola, Perfil, OcorrenciaFrequencia, StatusFuncionario } from '../types';
-import { employeeService } from '../services/employeeService';
-import { schoolService } from '../services/schoolService';
-import { useCatalogs } from './useCatalogs';
+import { Funcionario, Escola, Perfil, OcorrenciaFrequencia, StatusFuncionario } from '../types.ts';
+import { employeeService } from '../services/employeeService.ts';
+import { schoolService } from '../services/schoolService.ts';
+import { useCatalogs } from './useCatalogs.ts';
 
 export const useAppData = (
   usuarioId: string | undefined,
@@ -63,8 +63,6 @@ export const useAppData = (
     }
   };
 
-  // Fix: Updated salvarEscola to accept an optional logo file as a second argument, 
-  // resolving parameter count mismatch in components calling this hook.
   const salvarEscola = async (dados: Partial<Escola>, logo?: File) => {
     if (!donoId) return;
     try {

@@ -1,6 +1,6 @@
+
 import { createClient } from '@supabase/supabase-js';
 
-// Credenciais verificadas
 const SUPABASE_URL = 'https://bucutqjribdrqkvwmxbb.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_JXeJmxr7EvzfG-PxF4x16w_96eVzKOT';
 
@@ -16,20 +16,20 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-/**
- * Função de diagnóstico profundo para testar se as tabelas existem.
- */
 export const checkDatabaseConnection = async () => {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, message: "Supabase não configurado localmente." };
+  }
   try {
     const { data, error } = await supabase.from('escolas').select('count', { count: 'exact', head: true });
     if (error) {
       if (error.code === '42P01') {
-        return { ok: false, message: "Tabelas não encontradas. Execute o script SQL no painel do Supabase." };
+        return { ok: false, message: "Banco de dados vazio ou tabelas não criadas." };
       }
       return { ok: false, message: error.message };
     }
-    return { ok: true, message: "Conectado e tabelas verificadas." };
+    return { ok: true, message: "Conexão ativa." };
   } catch (e: any) {
-    return { ok: false, message: e.message };
+    return { ok: false, message: "Erro de conexão: " + e.message };
   }
 };

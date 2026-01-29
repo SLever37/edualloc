@@ -1,6 +1,5 @@
-
 import React, { useState, useRef } from 'react';
-import { Escola, Funcao, Setor, Funcionario, StatusFuncionario, TipoLotacao, Turno } from '../types';
+import { Escola, Funcao, Setor, Funcionario, StatusFuncionario, TipoLotacao, Turno } from '../types.ts';
 
 interface ExcelImportModalProps {
   escolas: Escola[];
@@ -29,12 +28,12 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ escolas, funcoes, s
     if (!file) return;
 
     try {
-        // Importação Dinâmica para evitar travar o app no início (White Screen Fix)
         const XLSX = await import('xlsx');
         
         const reader = new FileReader();
         reader.onload = (evt) => {
           const bstr = evt.target?.result;
+          if (typeof bstr !== 'string') return;
           const wb = XLSX.read(bstr, { type: 'binary' });
           const wsname = wb.SheetNames[0];
           const ws = wb.Sheets[wsname];
@@ -66,15 +65,13 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ escolas, funcoes, s
       };
 
       const nome = getVal(mapeamento.nome);
-      if (!nome) return; // Pula linhas sem nome
+      if (!nome) return;
 
-      // Tenta encontrar Escola pelo nome (Curadoria Automática)
       const nomeEscola = getVal(mapeamento.escola);
       const escolaEncontrada = escolas.find(e => 
         e.nome.toLowerCase().includes(String(nomeEscola || '').toLowerCase())
       );
 
-      // Tenta encontrar Função pelo nome
       const nomeFuncao = getVal(mapeamento.funcao);
       const funcaoEncontrada = funcoes.find(f => 
         f.nome.toLowerCase() === String(nomeFuncao || '').toLowerCase()
@@ -85,11 +82,10 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ escolas, funcoes, s
         cpf: String(getVal(mapeamento.cpf) || ''),
         matricula: String(getVal(mapeamento.matricula) || `IMP-${Math.floor(Math.random()*10000)}`),
         escolaId: escolaEncontrada?.id || '',
-        funcaoId: funcaoEncontrada?.id || funcoes[0]?.id || '', // Fallback para primeira função
-        setorId: setores[0]?.id || '', // Fallback para primeiro setor
+        funcaoId: funcaoEncontrada?.id || funcoes[0]?.id || '',
+        setorId: setores[0]?.id || '',
         status: StatusFuncionario.ATIVO,
         tipoLotacao: TipoLotacao.DEFINITIVA,
-        // Fix: corrected property names 'turno' to 'turnos' and 'cargaHorariaSemanal' to 'cargaHoraria'
         turnos: [Turno.MANHA],
         cargaHoraria: 40,
         possuiDobra: false,

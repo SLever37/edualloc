@@ -1,7 +1,6 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Funcionario, StatusFuncionario, Escola, Funcao, Setor, TipoLotacao, Turno, HistoricoLotacao, NivelFormacao } from '../types';
-import { supabase } from '../services/supabase';
+import { Funcionario, StatusFuncionario, Escola, Funcao, Setor, TipoLotacao, Turno, HistoricoLotacao, NivelFormacao } from '../types.ts';
+import { supabase } from '../services/supabase.ts';
 
 interface EmployeeModalProps {
   employee?: Partial<Funcionario>;
@@ -39,7 +38,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cálculo de Tempo de Serviço Memoizado
   const tempoServico = useMemo(() => {
     if (!formData.dataIngresso) return null;
     const inicio = new Date(formData.dataIngresso);
@@ -108,7 +106,6 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
     try {
         await onSave(formData, fotoFile);
     } catch (err) {
-        // Erro já tratado no service/hook
     } finally {
         setIsSaving(false);
     }
