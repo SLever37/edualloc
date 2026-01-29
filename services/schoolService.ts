@@ -1,6 +1,6 @@
 
-import { supabase, uploadFile } from './base';
-import { Escola, RhContact } from '../types';
+import { supabase, uploadFile } from './base.ts';
+import { Escola, RhContact } from '../types.ts';
 
 const getLocal = (key: string) => JSON.parse(localStorage.getItem(key) || '[]');
 const setLocal = (key: string, data: any[]) => localStorage.setItem(key, JSON.stringify(data));
@@ -44,24 +44,20 @@ export const schoolService = {
     const id = escola.id || crypto.randomUUID();
     const payload: any = {
         id,
-        dono_id: donoId
+        dono_id: donoId,
+        nome: escola.nome,
+        inep: escola.inep,
+        endereco: escola.endereco,
+        turnos_funcionamento: escola.turnosFuncionamento,
+        codigo_gestor: escola.codigoGestor,
+        codigo_acesso: escola.codigoAcesso,
+        notas_unidade: escola.notasUnidade,
+        logo_url: logoUrl,
+        contatos_rh: escola.contatosRh
     };
 
-    if (escola.inep) payload.inep = escola.inep;
-    if (escola.nome) payload.nome = escola.nome;
-    if (escola.endereco) payload.endereco = escola.endereco;
-    if (escola.turnosFuncionamento) payload.turnos_funcionamento = escola.turnosFuncionamento;
-    if (escola.codigoGestor) payload.codigo_gestor = escola.codigoGestor;
-    if (escola.codigoAcesso) payload.codigo_acesso = escola.codigoAcesso;
-    if (escola.notasUnidade !== undefined) payload.notas_unidade = escola.notasUnidade;
-    if (logoUrl) payload.logo_url = logoUrl;
-    if (escola.contatosRh) payload.contatos_rh = escola.contatosRh;
-
     const { error } = await supabase.from('escolas').upsert(payload);
-
-    if (error) {
-        throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
 
     const current = getLocal(`edualloc_escolas_${donoId}`);
     const index = current.findIndex((x: any) => x.id === id);

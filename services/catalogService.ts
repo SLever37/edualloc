@@ -1,5 +1,6 @@
-import { supabase } from './base';
-import { Setor, Funcao } from '../types';
+
+import { supabase } from './base.ts';
+import { Setor, Funcao } from '../types.ts';
 
 const getLocal = (key: string) => JSON.parse(localStorage.getItem(key) || '[]');
 const setLocal = (key: string, data: any[]) => localStorage.setItem(key, JSON.stringify(data));
@@ -12,23 +13,15 @@ export const catalogService = {
       .eq('dono_id', donoId)
       .order('nome');
     
-    if (error) {
-        console.warn("Usando backup local para setores");
-        return getLocal(`edualloc_setores_${donoId}`);
-    }
+    if (error) return getLocal(`edualloc_setores_${donoId}`);
     
     setLocal(`edualloc_setores_${donoId}`, data || []);
     return data || [];
   },
 
   async createSetor(nome: string, donoId: string): Promise<Setor> {
-    const newObj = { nome, dono_id: donoId };
-    const { data, error } = await supabase.from('setores').insert([newObj]).select().single();
-    
-    if (error) {
-        alert("Erro ao criar setor no banco: " + error.message);
-        throw error;
-    }
+    const { data, error } = await supabase.from('setores').insert([{ nome, dono_id: donoId }]).select().single();
+    if (error) throw error;
     return data as Setor;
   },
 
@@ -49,23 +42,15 @@ export const catalogService = {
       .eq('dono_id', donoId)
       .order('nome');
         
-    if (error) {
-        console.warn("Usando backup local para funções");
-        return getLocal(`edualloc_funcoes_${donoId}`);
-    }
+    if (error) return getLocal(`edualloc_funcoes_${donoId}`);
 
     setLocal(`edualloc_funcoes_${donoId}`, data || []);
     return data || [];
   },
 
   async createFuncao(nome: string, donoId: string): Promise<Funcao> {
-    const newObj = { nome, dono_id: donoId };
-    const { data, error } = await supabase.from('funcoes').insert([newObj]).select().single();
-    
-    if (error) {
-        alert("Erro ao criar função no banco: " + error.message);
-        throw error;
-    }
+    const { data, error } = await supabase.from('funcoes').insert([{ nome, dono_id: donoId }]).select().single();
+    if (error) throw error;
     return data as Funcao;
   },
 

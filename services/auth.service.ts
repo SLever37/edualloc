@@ -1,6 +1,6 @@
 
-import { supabase, isSupabaseConfigured } from './supabase';
-import { Perfil, Usuario } from '../types';
+import { supabase, isSupabaseConfigured } from './supabase.ts';
+import { Perfil, Usuario } from '../types.ts';
 import { Session } from '@supabase/supabase-js';
 
 const FALLBACK_KEY = 'edualloc_fallback_user';
@@ -70,7 +70,6 @@ export const authService = {
 
   async loginEscola(codigoGestor: string, codigoAcesso: string) {
     if (this.isDemoMode()) {
-      // Mock para modo demo
       const user: Usuario = {
         id: 'demo-gestor',
         nome: 'Gestor Unidade (Demo)',
@@ -83,7 +82,6 @@ export const authService = {
       return { success: true, user };
     }
 
-    // Busca a escola pelos códigos
     const { data: escola, error } = await supabase
       .from('escolas')
       .select('*')
@@ -92,11 +90,9 @@ export const authService = {
       .single();
 
     if (error || !escola) {
-      throw new Error("Código de Gestor ou Senha de Acesso inválidos para esta unidade.");
+      throw new Error("Código de Gestor ou Senha de Acesso inválidos.");
     }
 
-    // Cria um usuário "virtual" para o gestor se não estiver usando Supabase Auth real para eles
-    // Ou você pode ter um usuário real com email gestor_ID@edualloc.app
     const gestorUser: Usuario = {
       id: `gestor-${escola.id}`,
       nome: `Gestor ${escola.nome}`,

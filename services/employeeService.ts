@@ -1,6 +1,6 @@
 
-import { supabase, uploadFile } from './base';
-import { Funcionario, OcorrenciaFrequencia, StatusFuncionario } from '../types';
+import { supabase, uploadFile } from './base.ts';
+import { Funcionario, OcorrenciaFrequencia, StatusFuncionario } from '../types.ts';
 
 export const employeeService = {
   getAll: async (donoId: string) => {
@@ -34,7 +34,7 @@ export const employeeService = {
         nivelFormacao: f.nivel_formacao,
         cursoFormacao: f.curso_formacao,
         anoIngresso: f.ano_ingresso,
-        dataIngresso: f.data_ingresso, // Lendo data_ingresso
+        dataIngresso: f.data_ingresso,
         observacaoFrequencia: f.observacao_frequencia, 
         atestadoUrl: f.atestado_url,
         donoId: f.dono_id,
@@ -43,7 +43,7 @@ export const employeeService = {
   },
 
   save: async (func: Partial<Funcionario>, donoId: string, fotoFile?: File) => {
-    if (!donoId) throw new Error("Sessão inválida: Dono ID não identificado.");
+    if (!donoId) throw new Error("Sessão inválida.");
 
     let fotoUrl = func.fotoUrl;
     if (fotoFile) {
@@ -52,7 +52,6 @@ export const employeeService = {
       if (url) fotoUrl = url;
     }
 
-    // Mapeamento para o banco
     const payload = {
       id: func.id || undefined,
       nome: func.nome,
@@ -72,17 +71,13 @@ export const employeeService = {
       nivel_formacao: func.nivelFormacao,
       curso_formacao: func.cursoFormacao,
       ano_ingresso: func.anoIngresso,
-      data_ingresso: func.dataIngresso || null, // Gravando data_ingresso
+      data_ingresso: func.dataIngresso || null,
       foto_url: fotoUrl || null,
       dono_id: donoId
     };
 
     const { error } = await supabase.from('funcionarios').upsert(payload);
-    
-    if (error) {
-        console.error("Erro Supabase Lotação:", error);
-        throw new Error(`Erro ao salvar lotação: ${error.message}`);
-    }
+    if (error) throw new Error(error.message);
   },
 
   delete: async (id: string) => {
