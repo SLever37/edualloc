@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Funcionario, Escola, Perfil } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useAppData } from './hooks/useAppData';
-import { checkDatabaseConnection } from './services/supabase';
+import { checkDatabaseConnection, supabase } from './services/supabase';
 
 // Views & Components
 import Layout from './components/Layout';
@@ -83,7 +83,7 @@ const App: React.FC = () => {
     return isOAuthCallback ? <AuthCallbackView /> : (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
             <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-[2rem] animate-spin mb-8"></div>
-            <p className="text-slate-400 font-black text-xs uppercase tracking-[0.4em] animate-pulse text-center px-4">Sincronizando Rede...</p>
+            <p className="text-slate-400 font-black text-xs uppercase tracking-[0.4em] animate-pulse">Sincronizando Rede...</p>
         </div>
     );
   }

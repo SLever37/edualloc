@@ -25,23 +25,31 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
+    // Safety timeout to ensure loader closes even if supabase events fail
+    const safetyTimer = setTimeout(() => {
+      setLoadingSession(false);
+    }, 10000);
+
     carregarSessao();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        try {
+      console.debug("EduAlloc Auth Event:", event);
+      try {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
           const user = await authService.getSessionUser(session);
           setUsuario(user);
-        } finally {
-          setLoadingSession(false);
+        } else if (event === 'SIGNED_OUT') {
+          setUsuario(null);
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUsuario(null);
+      } catch (e) {
+        console.error("Erro no processamento de mudança de estado auth:", e);
+      } finally {
         setLoadingSession(false);
       }
     });
 
     return () => {
+        clearTimeout(safetyTimer);
         subscription.unsubscribe();
     };
   }, []);
