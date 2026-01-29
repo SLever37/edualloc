@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Funcionario, Escola, Perfil } from './types.ts';
 import { useAuth } from './hooks/useAuth.ts';
 import { useAppData } from './hooks/useAppData.ts';
@@ -50,42 +50,6 @@ const App: React.FC = () => {
     adicionarFuncao, editarFuncao, removerFuncao
   } = useAppData(usuario?.id, usuario?.donoId, usuario?.perfil);
 
-  // --- PREVENÇÃO DE SAÍDA E GESTÃO DE HISTÓRICO ---
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (usuario) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    const handlePopState = (event: PopStateEvent) => {
-      if (event.state && event.state.view) {
-        setVisaoAtiva(event.state.view);
-        if (event.state.escolaId) setIdEscolaSelecionada(event.state.escolaId);
-      } else {
-        setVisaoAtiva('dashboard');
-      }
-    };
-
-    const keepAliveInterval = setInterval(() => {
-      console.debug("EduAlloc: Mantendo conexão ativa...");
-    }, 1000 * 60 * 30);
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-    
-    if (!window.history.state) {
-      window.history.replaceState({ view: 'dashboard' }, '');
-    }
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-      clearInterval(keepAliveInterval);
-    };
-  }, [usuario]);
-
   useEffect(() => {
     checkDatabaseConnection().then(setDbStatus);
     const params = new URLSearchParams(window.location.search);
@@ -96,26 +60,32 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Monitora login do gestor para redirecionar ao portal correto
   useEffect(() => {
       if(usuario?.perfil === Perfil.GESTOR_ESCOLAR && usuario.escolaId) {
           setIdEscolaSelecionada(usuario.escolaId);
           setVisaoAtiva('portal-escola');
-          window.history.replaceState({ view: 'portal-escola', escolaId: usuario.escolaId }, '');
       }
   }, [usuario]);
 
   const navegarPara = (view: string, escolaId?: string) => {
-    if (view === visaoAtiva && escolaId === idEscolaSelecionada) return;
-    
     setVisaoAtiva(view);
     if (escolaId) setIdEscolaSelecionada(escolaId);
-    window.history.pushState({ view, escolaId }, '');
+    // Remove o parâmetro de portal da URL ao navegar no admin
+    if (view !== 'portal-escola' && !isRestrictedPortal) {
+      window.history.pushState({}, '', window.location.pathname);
+    }
   };
 
   const handleSchoolLogin = async (code: string, pass: string) => {
     setLoadingAuthAction(true);
-    await loginEscola(code, pass);
-    setLoadingAuthAction(false);
+    try {
+      await loginEscola(code, pass);
+    } catch (e) {
+      // Erro tratado pelo hook useAuth
+    } finally {
+      setLoadingAuthAction(false);
+    }
   };
 
   if (loadingSession || (isOAuthCallback && !usuario)) {
@@ -127,18 +97,24 @@ const App: React.FC = () => {
     );
   }
 
+  // Se não houver usuário logado
   if (!usuario) {
+    // Se a URL contém um código de portal, mostra o login específico da escola
     if (isRestrictedPortal) {
       return (
         <SchoolDirectLoginView 
           schoolCode={portalCodeFromUrl} 
           onLogin={handleSchoolLogin} 
-          onExit={() => setIsRestrictedPortal(false)} 
+          onExit={() => {
+            setIsRestrictedPortal(false);
+            window.history.pushState({}, '', window.location.pathname);
+          }} 
           loading={loadingAuthAction} 
           error={authError} 
         />
       );
     }
+    // Caso contrário, mostra o login padrão do RH
     return (
       <MainLoginView 
         onAdminLogin={loginAdmin} 
