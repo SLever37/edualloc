@@ -101,7 +101,7 @@ export interface Funcionario {
   nivelFormacao?: NivelFormacao;
   cursoFormacao?: string;
   anoIngresso?: number;
-  dataIngresso?: string; // NOVO CAMPO
+  dataIngresso?: string;
   
   possuiDobra: boolean; 
   presencaConfirmada: boolean;
@@ -124,6 +124,7 @@ export interface Escola {
   codigoGestor: string;
   codigoAcesso: string;
   donoId: string;
+  notasUnidade?: string; // NOVO: Mural de avisos para o RH
 }
 
 export interface Usuario {

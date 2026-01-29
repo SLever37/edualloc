@@ -22,7 +22,8 @@ export const schoolService = {
             turnosFuncionamento: e.turnos_funcionamento || [],
             codigoGestor: e.codigo_gestor,
             codigoAcesso: e.codigo_acesso,
-            donoId: e.dono_id
+            donoId: e.dono_id,
+            notasUnidade: e.notas_unidade
         }));
     } catch (e) {
         console.error("Erro ao buscar escolas:", e);
@@ -31,39 +32,31 @@ export const schoolService = {
   },
   
   upsert: async (escola: Partial<Escola>, donoId: string) => {
-    // 1. Validação de INEP (Frontend Guard)
-    const inepRegex = /^[0-9]{8}$/;
-    if (!escola.inep || !inepRegex.test(escola.inep)) {
-        throw new Error("INEP deve ter exatamente 8 dígitos numéricos.");
-    }
-
     const id = escola.id || crypto.randomUUID();
-    const payload = {
+    const payload: any = {
         id,
-        inep: escola.inep,
-        nome: escola.nome,
-        endereco: escola.endereco,
-        turnos_funcionamento: escola.turnosFuncionamento || [], // text[]
-        codigo_gestor: escola.codigoGestor,
-        codigo_acesso: escola.codigoAcesso,
         dono_id: donoId
     };
+
+    if (escola.inep) payload.inep = escola.inep;
+    if (escola.nome) payload.nome = escola.nome;
+    if (escola.endereco) payload.endereco = escola.endereco;
+    if (escola.turnosFuncionamento) payload.turnos_funcionamento = escola.turnosFuncionamento;
+    if (escola.codigoGestor) payload.codigo_gestor = escola.codigoGestor;
+    if (escola.codigoAcesso) payload.codigo_acesso = escola.codigoAcesso;
+    if (escola.notasUnidade !== undefined) payload.notas_unidade = escola.notasUnidade;
 
     const { error } = await supabase.from('escolas').upsert(payload);
 
     if (error) {
-        // 2. Tratamento de erros de banco (Postgres Codes)
         if (error.code === '23505') throw new Error(`O INEP ${escola.inep} já está cadastrado nesta rede.`);
-        if (error.code === '23502') throw new Error("Campos obrigatórios ausentes (INEP/Dono).");
-        if (error.message.includes('escolas_inep_formato_ck')) throw new Error("Formato de INEP inválido no banco.");
         throw new Error(error.message);
     }
 
-    // Cache Local para Resiliência
     const current = getLocal(`edualloc_escolas_${donoId}`);
     const index = current.findIndex((x: any) => x.id === id);
     const localPayload = { ...escola, id, donoId };
-    if (index >= 0) current[index] = localPayload; else current.push(localPayload);
+    if (index >= 0) current[index] = { ...current[index], ...localPayload }; else current.push(localPayload);
     setLocal(`edualloc_escolas_${donoId}`, current);
   },
 

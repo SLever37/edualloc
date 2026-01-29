@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Funcionario, Escola, Perfil } from './types';
 import { useAuth } from './hooks/useAuth';
 import { useAppData } from './hooks/useAppData';
-import { checkDatabaseConnection } from './services/supabase';
+import { checkDatabaseConnection, supabase } from './services/supabase';
 
 // Views & Components
 import Layout from './components/Layout';
@@ -53,12 +53,9 @@ const App: React.FC = () => {
     };
     checkDb();
 
-    // Detectar se voltamos de um OAuth (Supabase usa fragmento #access_token=...)
     const hash = window.location.hash;
     if (hash.includes('access_token=') || hash.includes('type=recovery') || hash.includes('type=signup')) {
       setIsOAuthCallback(true);
-      // Limpa a URL após detecção (opcional, Supabase JS SDK lida com isso)
-      // mas para UX é melhor mostrar o loader e depois limpar.
     }
 
     const params = new URLSearchParams(window.location.search);
@@ -69,11 +66,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Limpa o estado de callback quando o usuário é carregado
   useEffect(() => {
     if (usuario && isOAuthCallback) {
       setIsOAuthCallback(false);
-      // Limpa hash da URL sem recarregar
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }, [usuario, isOAuthCallback]);
@@ -95,7 +90,7 @@ const App: React.FC = () => {
   useEffect(() => {
       if(usuario?.perfil === Perfil.GESTOR_ESCOLAR && usuario.escolaId) {
           setIdEscolaSelecionada(usuario.escolaId);
-          navegarPara('portal-escola', usuario.escolaId);
+          setVisaoAtiva('portal-escola');
       }
   }, [usuario]);
 
@@ -111,12 +106,38 @@ const App: React.FC = () => {
     setLoadingAuthAction(false);
   };
 
-  const adicionarMembroEquipe = async (email: string, pass: string, nome: string) => {
-      if(!usuario?.donoId) return;
-      alert("Recurso disponível em breve.");
+  const handleUpdateSchoolNotes = async (notes: string) => {
+    if (idEscolaSelecionada) {
+      await salvarEscola({ id: idEscolaSelecionada, notasUnidade: notes });
+    }
   };
 
-  // Se estiver carregando a sessão ou processando OAuth, mostra loader
+  // Fix: added missing adicionarMembroEquipe function to handle team registration within the organization
+  const adicionarMembroEquipe = async (email: string, pass: string, nome: string) => {
+    if (!usuario) return;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: pass,
+      options: {
+        data: {
+          full_name: nome,
+          perfil: Perfil.ADMINISTRADOR,
+          dono_id: usuario.donoId
+        }
+      }
+    });
+    if (error) throw error;
+    if (data.user) {
+      await supabase.from('perfis').upsert({
+        id: data.user.id,
+        nome: nome,
+        email: email,
+        perfil: Perfil.ADMINISTRADOR,
+        dono_id: usuario.donoId
+      });
+    }
+  };
+
   if (loadingSession || (isOAuthCallback && !usuario)) {
     return isOAuthCallback ? <AuthCallbackView /> : (
         <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
@@ -205,6 +226,7 @@ const App: React.FC = () => {
           onToggleAttendance={alternarPresenca}
           isAdminView={usuario.perfil === Perfil.ADMINISTRADOR || usuario.perfil === Perfil.SUPER_ADMIN}
           onEditEmployee={(f) => { setFuncionarioEmEdicao(f); setIsModalFuncionarioAberto(true); }}
+          onUpdateSchoolNotes={handleUpdateSchoolNotes}
         />
       )}
       {isModalFuncionarioAberto && (
