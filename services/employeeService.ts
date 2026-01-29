@@ -1,6 +1,6 @@
 
 import { supabase, uploadFile } from './base.ts';
-import { Funcionario, OcorrenciaFrequencia, StatusFuncionario, Formacao, NivelFormacao } from '../types.ts';
+import { Funcionario, OcorrenciaFrequencia, StatusFuncionario, Formacao, NivelFormacao, Documento } from '../types.ts';
 
 export const employeeService = {
   getAll: async (donoId: string) => {
@@ -16,17 +16,11 @@ export const employeeService = {
     }
 
     return (data || []).map((f: any) => {
-        // Lógica de Parsing para Formações (Suporta JSON novo ou String legada)
         let listaFormacoes: Formacao[] = [];
         try {
             const parsed = JSON.parse(f.curso_formacao);
-            if (Array.isArray(parsed)) {
-                listaFormacoes = parsed;
-            } else {
-                throw new Error("Não é array");
-            }
+            listaFormacoes = Array.isArray(parsed) ? parsed : [];
         } catch (e) {
-            // Fallback para dados legados que eram apenas strings
             if (f.curso_formacao) {
                 listaFormacoes = [{ 
                     nivel: (f.nivel_formacao as NivelFormacao) || NivelFormacao.GRADUACAO, 
@@ -34,6 +28,12 @@ export const employeeService = {
                 }];
             }
         }
+
+        // Parsing de documentos (armazenados como JSON em coluna de texto ou jsonb)
+        let docs: Documento[] = [];
+        try {
+            docs = typeof f.documentos === 'string' ? JSON.parse(f.documentos) : (f.documentos || []);
+        } catch (e) { docs = []; }
 
         return {
             id: f.id,
@@ -59,7 +59,8 @@ export const employeeService = {
             observacaoFrequencia: f.observacao_frequencia, 
             atestadoUrl: f.atestado_url,
             donoId: f.dono_id,
-            fotoUrl: f.foto_url
+            fotoUrl: f.foto_url,
+            documentos: docs
         };
     });
   },
@@ -74,7 +75,6 @@ export const employeeService = {
       if (url) fotoUrl = url;
     }
 
-    // Mapeamento dinâmico: usamos curso_formacao como storage JSON para evitar erro de coluna inexistente
     const payload: any = {
       id: func.id || undefined,
       nome: func.nome,
@@ -91,9 +91,9 @@ export const employeeService = {
       tipo_lotacao: func.tipoLotacao || 'Definitiva',
       turnos: Array.isArray(func.turnos) ? func.turnos : [],
       carga_horaria: Math.floor(Number(func.cargaHoraria || 0)),
-      // Serializamos o array de formações na coluna de texto existente
       curso_formacao: JSON.stringify(func.formacoes || []),
       nivel_formacao: func.formacoes?.[0]?.nivel || null,
+      documentos: JSON.stringify(func.documentos || []),
       dono_id: donoId
     };
 
@@ -103,6 +103,18 @@ export const employeeService = {
 
     const { error } = await supabase.from('funcionarios').upsert(payload);
     if (error) throw new Error(error.message);
+  },
+
+  uploadDoc: async (donoId: string, file: File): Promise<Documento | null> => {
+    const path = `${donoId}/documentos/${Date.now()}_${file.name}`;
+    const url = await uploadFile('fotos', path, file);
+    if (!url) return null;
+    return {
+      id: crypto.randomUUID(),
+      nome: file.name,
+      url: url,
+      tipo: file.type
+    };
   },
 
   delete: async (id: string) => {
