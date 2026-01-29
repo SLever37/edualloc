@@ -10,7 +10,7 @@ interface SchoolPortalProps {
   onEditEmployee?: (emp: Funcionario) => void;
   onUpdateSchoolNotes?: (notes: string) => void;
   onUpdateLogo?: (file: File) => void;
-  rhContacts?: RhContact[]; // Contatos globais vindos do perfil RH
+  rhContacts?: RhContact[]; 
 }
 
 const SchoolPortal: React.FC<SchoolPortalProps> = ({ 
@@ -21,6 +21,7 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
   const [obsFalta, setObsFalta] = useState('');
   const [editNotes, setEditNotes] = useState(false);
   const [tempNotes, setTempNotes] = useState(school.notasUnidade || '');
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -32,6 +33,35 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
     if (e.target.files?.[0]) {
       onUpdateLogo?.(e.target.files[0]);
     }
+  };
+
+  const handleWhatsApp = (f: Funcionario) => {
+    let tel = f.telefone;
+    if (!tel) {
+        const input = window.prompt(`WhatsApp para ${f.nome}\n\nDigite o número (com DDD):`, "55");
+        if (input) tel = input;
+    }
+    if (tel) {
+        const cleanTel = tel.replace(/\D/g, '');
+        window.open(`https://wa.me/${cleanTel}?text=Olá ${f.nome}, mensagem da gestão escolar.`, '_blank');
+    }
+  };
+
+  const handleEmail = (f: Funcionario) => {
+    const recipient = f.email || "";
+    window.open(`mailto:${recipient}?subject=Aviso Escola - ${f.nome}&body=Prezado(a) ${f.nome},`, '_blank');
+  };
+
+  const sharePortalAccess = () => {
+    const portalUrl = `${window.location.origin}/?portal=${school.codigoGestor}`;
+    const message = `*EduAlloc - Portal de Lotação Escolar*\n\nUnidade: ${school.nome}\n\n*Instruções de Acesso:*\n1. Acesse o link abaixo;\n2. Informe o INEP e a Senha de Acesso fornecidos.\n\n*Link de Acesso:* ${portalUrl}\n*INEP:* ${school.inep}\n*Senha:* ${school.codigoAcesso}\n\n_Guarde estas credenciais em segurança._`;
+    
+    // Tentar copiar para o clipboard
+    navigator.clipboard.writeText(message).then(() => {
+        alert("Link e instruções de acesso copiados para a área de transferência! Envie agora para o gestor.");
+        // Opcional: Abrir WhatsApp se possível
+        window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    });
   };
 
   const groupedBySector = employeesArray.reduce((acc, emp) => {
@@ -63,10 +93,21 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
           </div>
 
           <div className="text-center md:text-left flex-1">
-            <h2 className="text-3xl font-black tracking-tight leading-none mb-2">{school.nome}</h2>
+            <div className="flex flex-col md:flex-row md:items-center gap-4 mb-2">
+                <h2 className="text-3xl font-black tracking-tight leading-none">{school.nome}</h2>
+                {isAdminView && (
+                    <button 
+                        onClick={sharePortalAccess}
+                        className="mx-auto md:mx-0 px-3 py-1.5 bg-indigo-600/50 hover:bg-indigo-600 border border-indigo-400 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition flex items-center gap-2"
+                    >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                        Compartilhar Acesso
+                    </button>
+                )}
+            </div>
             <div className="flex flex-wrap justify-center md:justify-start gap-4 text-xs font-bold text-slate-400">
                <span className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 uppercase tracking-widest text-[10px]">INEP: {school.inep}</span>
-               <span className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 uppercase tracking-widest text-[10px]">Gestor: {school.codigoGestor}</span>
+               <span className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 uppercase tracking-widest text-[10px]">Portal: {school.codigoGestor}</span>
             </div>
             <p className="mt-4 text-slate-400 text-sm font-medium flex items-center justify-center md:justify-start gap-2">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -109,22 +150,54 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
               </div>
               <div className="divide-y divide-slate-100">
                 {(members as any[]).map(emp => (
-                  <div key={emp.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50/80 transition-all">
-                    <div className="flex gap-5 items-center min-w-0">
+                  <div key={emp.id} className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-slate-50/80 transition-all group/row">
+                    <div className="flex gap-5 items-center min-w-0 flex-1">
                       <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex-shrink-0 flex items-center justify-center overflow-hidden">
                         {emp.fotoUrl ? <img src={emp.fotoUrl} className="w-full h-full object-cover" /> : <svg className="text-indigo-200" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>}
                       </div>
                       <div className="min-w-0">
                         <p className="font-black text-slate-900 truncate leading-tight">{emp.nome}</p>
-                        <p className="text-[10px] font-black text-indigo-500 uppercase mt-1 tracking-widest">{emp.roleLabel || 'Servidor'}</p>
+                        <p className="text-[10px] font-black text-indigo-500 uppercase mt-1 tracking-widest flex items-center gap-2">
+                            {emp.roleLabel || 'Servidor'}
+                            {(emp.formacoes?.length > 0) && (
+                                <span className="text-[8px] bg-indigo-100 text-indigo-600 px-1 rounded lowercase" title={emp.formacoes.map((f:any) => f.curso).join(', ')}>+{emp.formacoes.length} hab.</span>
+                            )}
+                        </p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                      <div className="relative">
+                          <button 
+                            onClick={() => setOpenActionId(openActionId === emp.id ? null : emp.id)}
+                            className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 border border-slate-100 rounded-xl transition-all"
+                          >
+                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                          </button>
+                          
+                          {openActionId === emp.id && (
+                              <div className="absolute right-0 bottom-full mb-2 w-40 bg-white rounded-xl shadow-xl border border-slate-100 z-50 p-2 animate-modal">
+                                  <button onClick={() => { handleWhatsApp(emp); setOpenActionId(null); }} className="w-full text-left p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase transition flex items-center gap-2 mb-1">
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                      WhatsApp
+                                  </button>
+                                  <button onClick={() => { handleEmail(emp); setOpenActionId(null); }} className="w-full text-left p-2 hover:bg-sky-50 text-sky-600 rounded-lg text-[10px] font-black uppercase transition flex items-center gap-2 mb-1">
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                      E-mail
+                                  </button>
+                                  <div className="h-px bg-slate-100 my-1"></div>
+                                  <button onClick={() => { onEditEmployee?.(emp); setOpenActionId(null); }} className="w-full text-left p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase transition flex items-center gap-2">
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                      Editar Perfil
+                                  </button>
+                              </div>
+                          )}
+                      </div>
+
                       <button 
                         onClick={() => emp.presencaConfirmada ? setModalFalta(emp) : onToggleAttendance(emp.id, OcorrenciaFrequencia.PRESENCA)}
                         disabled={emp.status !== StatusFuncionario.ATIVO}
-                        className={`h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex-1 md:flex-none ${emp.presencaConfirmada ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                        className={`h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex-1 md:flex-none ${emp.presencaConfirmada ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
                       >
                         {emp.presencaConfirmada ? 'Confirmado' : 'Falta'}
                       </button>

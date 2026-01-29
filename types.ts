@@ -48,6 +48,11 @@ export enum OcorrenciaFrequencia {
   SUSPENSAO = 'Suspensão'
 }
 
+export interface Formacao {
+  nivel: NivelFormacao;
+  curso: string;
+}
+
 export interface Funcao {
   id: string;
   nome: string;
@@ -98,8 +103,10 @@ export interface Funcionario {
   turnos: Turno[]; 
   cargaHoraria: number; 
   
-  nivelFormacao?: NivelFormacao;
-  cursoFormacao?: string;
+  formacoes: Formacao[]; // Substituindo campos únicos por lista
+  nivelFormacao?: NivelFormacao; // Mantido para compatibilidade legado se necessário
+  cursoFormacao?: string;       // Mantido para compatibilidade legado se necessário
+  
   anoIngresso?: number;
   dataIngresso?: string;
   

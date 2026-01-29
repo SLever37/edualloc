@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Funcionario, StatusFuncionario, Escola, Funcao, Setor, TipoLotacao, Turno, HistoricoLotacao, NivelFormacao } from '../types.ts';
+import { Funcionario, StatusFuncionario, Escola, Funcao, Setor, TipoLotacao, Turno, HistoricoLotacao, NivelFormacao, Formacao } from '../types.ts';
 import { supabase } from '../services/supabase.ts';
 
 interface EmployeeModalProps {
@@ -23,12 +24,18 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
     tipoLotacao: TipoLotacao.DEFINITIVA,
     turnos: [Turno.MANHA],
     cargaHoraria: 20,
-    nivelFormacao: NivelFormacao.GRADUACAO,
-    cursoFormacao: '',
+    formacoes: [],
     anoIngresso: new Date().getFullYear(),
     dataIngresso: '', 
     ...employee
   });
+
+  // Garantia de que formacoes é um array (previne erro de iteração se o objeto employee for parcial ou legado)
+  useEffect(() => {
+    if (!Array.isArray(formData.formacoes)) {
+        setFormData(prev => ({ ...prev, formacoes: [] }));
+    }
+  }, [formData.formacoes]);
 
   const [fotoFile, setFotoFile] = useState<File | undefined>();
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(employee?.fotoUrl);
@@ -95,6 +102,28 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
     });
   };
 
+  const addFormacao = () => {
+    setFormData(prev => ({
+      ...prev,
+      formacoes: [...(prev.formacoes || []), { nivel: NivelFormacao.GRADUACAO, curso: '' }]
+    }));
+  };
+
+  const updateFormacao = (idx: number, field: keyof Formacao, value: string) => {
+    setFormData(prev => {
+      const novas = [...(prev.formacoes || [])];
+      (novas[idx] as any)[field] = value;
+      return { ...prev, formacoes: novas };
+    });
+  };
+
+  const removeFormacao = (idx: number) => {
+    setFormData(prev => ({
+      ...prev,
+      formacoes: prev.formacoes?.filter((_, i) => i !== idx)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.dataIngresso) {
@@ -133,7 +162,7 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
              </div>
              <div className="flex gap-6 mt-6 overflow-x-auto pb-1 no-scrollbar">
                 <button type="button" onClick={() => setActiveTab('dados')} className={`text-[10px] font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'dados' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Dados</button>
-                <button type="button" onClick={() => setActiveTab('academico')} className={`text-[10px] font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'academico' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Formação & Tempo</button>
+                <button type="button" onClick={() => setActiveTab('academico')} className={`text-[10px] font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'academico' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Formações & Tempo</button>
                 <button type="button" onClick={() => setActiveTab('lotacao')} className={`text-[10px] font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'lotacao' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Lotação</button>
                 <button type="button" onClick={() => setActiveTab('midia')} className={`text-[10px] font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'midia' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Documentos</button>
                 {employee?.id && <button type="button" onClick={() => setActiveTab('historico')} className={`text-[10px] font-black uppercase tracking-widest pb-2 border-b-2 transition whitespace-nowrap ${activeTab === 'historico' ? 'border-white text-white' : 'border-transparent text-indigo-300 hover:text-white'}`}>Histórico</button>}
@@ -149,33 +178,54 @@ const EmployeeModal: React.FC<EmployeeModalProps> = ({ employee, schools, roles,
                     <div><label className={labelClass}>Matrícula</label><input required type="text" className={inputClass} value={formData.matricula} onChange={e => setFormData({ ...formData, matricula: e.target.value })} /></div>
                     <div><label className={labelClass}>Função</label><select className={inputClass} value={formData.funcaoId} onChange={e => setFormData({ ...formData, funcaoId: e.target.value })}>{roles.map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}</select></div>
                     <div><label className={labelClass}>E-mail</label><input type="email" className={inputClass} value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} /></div>
+                    <div><label className={labelClass}>Telefone / WhatsApp</label><input type="text" placeholder="(00) 00000-0000" className={inputClass} value={formData.telefone || ''} onChange={e => setFormData({ ...formData, telefone: e.target.value })} /></div>
                   </div>
               )}
 
               {activeTab === 'academico' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-2">
-                     <div className="md:col-span-2">
-                        <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 flex flex-col md:flex-row justify-between items-center gap-4">
-                            <div className="w-full md:w-auto">
-                                <label className="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2">Data de Ingresso (Matrícula)</label>
-                                <input 
-                                    required
-                                    type="date" 
-                                    className="w-full h-12 px-4 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-900 outline-none focus:ring-4 focus:ring-indigo-500/10" 
-                                    value={formData.dataIngresso} 
-                                    onChange={e => setFormData({ ...formData, dataIngresso: e.target.value, anoIngresso: new Date(e.target.value).getFullYear() })} 
-                                />
-                            </div>
-                            <div className="text-center md:text-right">
-                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Tempo de Serviço</p>
-                                <p className="text-2xl font-black text-indigo-600 leading-tight">
-                                    {tempoServico || "--"}
-                                </p>
-                            </div>
+                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                     <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="w-full md:w-auto">
+                            <label className="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2">Data de Ingresso (Matrícula)</label>
+                            <input 
+                                required
+                                type="date" 
+                                className="w-full h-12 px-4 bg-white border border-indigo-200 rounded-xl font-bold text-indigo-900 outline-none focus:ring-4 focus:ring-indigo-500/10" 
+                                value={formData.dataIngresso} 
+                                onChange={e => setFormData({ ...formData, dataIngresso: e.target.value, anoIngresso: new Date(e.target.value).getFullYear() })} 
+                            />
+                        </div>
+                        <div className="text-center md:text-right">
+                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Tempo de Serviço</p>
+                            <p className="text-2xl font-black text-indigo-600 leading-tight">{tempoServico || "--"}</p>
                         </div>
                      </div>
-                     <div><label className={labelClass}>Nível de Formação</label><select className={inputClass} value={formData.nivelFormacao} onChange={e => setFormData({ ...formData, nivelFormacao: e.target.value as NivelFormacao })}>{Object.values(NivelFormacao).map(n => <option key={n} value={n}>{n}</option>)}</select></div>
-                     <div><label className={labelClass}>Curso</label><input type="text" className={inputClass} value={formData.cursoFormacao || ''} onChange={e => setFormData({ ...formData, cursoFormacao: e.target.value })} /></div>
+
+                     <div className="border-t pt-4">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Formações & Habilidades</h3>
+                            <button type="button" onClick={addFormacao} className="text-[10px] font-black text-indigo-600 uppercase">+ Adicionar</button>
+                        </div>
+                        
+                        <div className="space-y-3">
+                           {Array.isArray(formData.formacoes) && formData.formacoes.map((f, i) => (
+                             <div key={i} className="flex gap-2 items-end bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <div className="flex-1">
+                                   <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Nível</label>
+                                   <select className="w-full h-9 px-2 bg-white border border-slate-200 rounded-lg text-xs font-bold" value={f.nivel} onChange={e => updateFormacao(i, 'nivel', e.target.value)}>
+                                      {Object.values(NivelFormacao).map(n => <option key={n} value={n}>{n}</option>)}
+                                   </select>
+                                </div>
+                                <div className="flex-[2]">
+                                   <label className="text-[9px] font-black text-slate-400 uppercase mb-1 block">Curso / Habilidade</label>
+                                   <input className="w-full h-9 px-2 bg-white border border-slate-200 rounded-lg text-xs font-bold" value={f.curso} onChange={e => updateFormacao(i, 'curso', e.target.value)} placeholder="Ex: Letras, Gestão Escolar..." />
+                                </div>
+                                <button type="button" onClick={() => removeFormacao(i)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                             </div>
+                           ))}
+                           {(!formData.formacoes || formData.formacoes.length === 0) && <p className="text-center py-4 text-slate-400 text-[10px] font-bold italic">Nenhuma formação cadastrada.</p>}
+                        </div>
+                     </div>
                   </div>
               )}
 

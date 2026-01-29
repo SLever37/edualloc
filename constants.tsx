@@ -22,6 +22,8 @@ export const FUNCIONARIOS_INICIAIS: Funcionario[] = [
     tipoLotacao: TipoLotacao.DEFINITIVA,
     turnos: [Turno.MANHA],
     cargaHoraria: 40,
+    // Fix: Adding required 'formacoes' property to satisfy Funcionario interface requirement
+    formacoes: [],
     donoId: 'dono1'
   }
 ];
