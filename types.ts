@@ -25,11 +25,10 @@ export enum TipoLotacao {
 }
 
 export enum Turno {
-  MANHA = 'Manhã',
-  TARDE = 'Tarde',
-  NOITE = 'Noite',
-  INTEGRAL = 'Integral',
-  ALTERNADO = 'Alternado'
+  MANHA = 'Matutino',
+  TARDE = 'Vespertino',
+  NOITE = 'Noturno',
+  INTEGRAL = 'Integral'
 }
 
 export enum NivelFormacao {
@@ -66,7 +65,7 @@ export interface Documento {
   nome: string;
   url: string;
   tipo: string;
-  validade?: string; // Data ISO
+  validade?: string; 
 }
 
 export interface HistoricoLotacao {
@@ -74,8 +73,8 @@ export interface HistoricoLotacao {
   funcionarioId: string;
   escolaAnteriorId?: string;
   escolaNovaId?: string;
-  escolaAnteriorNome?: string; // Auxiliar para display
-  escolaNovaNome?: string;     // Auxiliar para display
+  escolaAnteriorNome?: string; 
+  escolaNovaNome?: string;     
   dataMovimentacao: string;
   motivo?: string;
   usuarioResponsavel?: string;
@@ -85,7 +84,7 @@ export interface Funcionario {
   id: string;
   nome: string;
   cpf: string;
-  matricula: string; // Identificador único do Vínculo
+  matricula: string; 
   
   email?: string;
   telefone?: string;
@@ -96,21 +95,21 @@ export interface Funcionario {
   escolaId: string;
   
   tipoLotacao: TipoLotacao;
-  turno: Turno;
-  cargaHorariaSemanal: number; // 20, 25, 40, 60
+  turnos: Turno[]; 
+  cargaHoraria: number; 
   
-  // RH Acadêmico e Histórico
   nivelFormacao?: NivelFormacao;
   cursoFormacao?: string;
   anoIngresso?: number;
+  dataIngresso?: string; // NOVO CAMPO
   
-  possuiDobra: boolean; // Flag visual, mas o controle real é por múltiplas matrículas
+  possuiDobra: boolean; 
   presencaConfirmada: boolean;
   ultimaOcorrencia?: OcorrenciaFrequencia;
   observacaoFrequencia?: string;
   atestadoUrl?: string;
   
-  donoId?: string;
+  donoId: string; 
   fotoUrl?: string; 
   documentos?: Documento[];
   historico?: HistoricoLotacao[];
@@ -118,12 +117,13 @@ export interface Funcionario {
 
 export interface Escola {
   id: string;
+  inep: string; 
   nome: string;
   endereco: string;
-  turnosAtivos: Turno[]; // Configuração da Escola (Quais turnos ela opera)
+  turnosFuncionamento: Turno[]; 
   codigoGestor: string;
   codigoAcesso: string;
-  donoId?: string;
+  donoId: string;
 }
 
 export interface Usuario {

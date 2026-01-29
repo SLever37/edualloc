@@ -89,8 +89,9 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ escolas, funcoes, s
         setorId: setores[0]?.id || '', // Fallback para primeiro setor
         status: StatusFuncionario.ATIVO,
         tipoLotacao: TipoLotacao.DEFINITIVA,
-        turno: Turno.MANHA,
-        cargaHorariaSemanal: 40,
+        // Fix: corrected property names 'turno' to 'turnos' and 'cargaHorariaSemanal' to 'cargaHoraria'
+        turnos: [Turno.MANHA],
+        cargaHoraria: 40,
         possuiDobra: false,
         presencaConfirmada: false
       });

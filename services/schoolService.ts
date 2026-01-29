@@ -1,3 +1,4 @@
+
 import { supabase } from './base';
 import { Escola } from '../types';
 
@@ -14,24 +15,35 @@ export const schoolService = {
         if (error) throw error;
 
         return (data || []).map((e: any) => ({
-            ...e,
-            turnosAtivos: e.turnos_ativos || [],
+            id: e.id,
+            inep: e.inep,
+            nome: e.nome,
+            endereco: e.endereco,
+            turnosFuncionamento: e.turnos_funcionamento || [],
             codigoGestor: e.codigo_gestor,
             codigoAcesso: e.codigo_acesso,
             donoId: e.dono_id
         }));
     } catch (e) {
+        console.error("Erro ao buscar escolas:", e);
         return getLocal(`edualloc_escolas_${donoId}`);
     }
   },
   
   upsert: async (escola: Partial<Escola>, donoId: string) => {
+    // 1. Validação de INEP (Frontend Guard)
+    const inepRegex = /^[0-9]{8}$/;
+    if (!escola.inep || !inepRegex.test(escola.inep)) {
+        throw new Error("INEP deve ter exatamente 8 dígitos numéricos.");
+    }
+
     const id = escola.id || crypto.randomUUID();
     const payload = {
         id,
+        inep: escola.inep,
         nome: escola.nome,
         endereco: escola.endereco,
-        turnos_ativos: escola.turnosAtivos,
+        turnos_funcionamento: escola.turnosFuncionamento || [], // text[]
         codigo_gestor: escola.codigoGestor,
         codigo_acesso: escola.codigoAcesso,
         dono_id: donoId
@@ -39,18 +51,25 @@ export const schoolService = {
 
     const { error } = await supabase.from('escolas').upsert(payload);
 
-    // Cache Local
+    if (error) {
+        // 2. Tratamento de erros de banco (Postgres Codes)
+        if (error.code === '23505') throw new Error(`O INEP ${escola.inep} já está cadastrado nesta rede.`);
+        if (error.code === '23502') throw new Error("Campos obrigatórios ausentes (INEP/Dono).");
+        if (error.message.includes('escolas_inep_formato_ck')) throw new Error("Formato de INEP inválido no banco.");
+        throw new Error(error.message);
+    }
+
+    // Cache Local para Resiliência
     const current = getLocal(`edualloc_escolas_${donoId}`);
     const index = current.findIndex((x: any) => x.id === id);
     const localPayload = { ...escola, id, donoId };
     if (index >= 0) current[index] = localPayload; else current.push(localPayload);
     setLocal(`edualloc_escolas_${donoId}`, current);
-
-    if (error) throw error;
   },
 
   delete: async (id: string) => {
-    await supabase.from('escolas').delete().eq('id', id);
+    const { error } = await supabase.from('escolas').delete().eq('id', id);
+    if (error) throw error;
     
     Object.keys(localStorage).forEach(key => {
         if(key.startsWith('edualloc_escolas_')) {

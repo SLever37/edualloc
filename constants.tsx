@@ -2,9 +2,10 @@
 import { Escola, Funcionario, StatusFuncionario, TipoLotacao, Turno } from './types';
 
 export const ESCOLAS_INICIAIS: Escola[] = [
-  { id: '1', nome: 'E.M. Machado de Assis', endereco: 'Rua das Flores, 123', codigoGestor: 'MA-9921', codigoAcesso: '1234', turnosAtivos: [Turno.MANHA, Turno.TARDE] },
-  { id: '2', nome: 'CIEP 201 - Monteiro Lobato', endereco: 'Av. Brasil, 500', codigoGestor: 'ML-1044', codigoAcesso: '1234', turnosAtivos: [Turno.MANHA, Turno.TARDE, Turno.NOITE] },
-  { id: '3', nome: 'E.M. Clarice Lispector', endereco: 'Praça da Paz, 10', codigoGestor: 'CL-7723', codigoAcesso: '1234', turnosAtivos: [Turno.MANHA, Turno.TARDE] }
+  // Fix: changed 'turnosAtivos' to 'turnosFuncionamento' and added missing 'inep' and 'donoId' properties
+  { id: '1', inep: '12345678', nome: 'E.M. Machado de Assis', endereco: 'Rua das Flores, 123', codigoGestor: 'MA-9921', codigoAcesso: '1234', turnosFuncionamento: [Turno.MANHA, Turno.TARDE], donoId: 'dono1' },
+  { id: '2', inep: '23456789', nome: 'CIEP 201 - Monteiro Lobato', endereco: 'Av. Brasil, 500', codigoGestor: 'ML-1044', codigoAcesso: '1234', turnosFuncionamento: [Turno.MANHA, Turno.TARDE, Turno.NOITE], donoId: 'dono1' },
+  { id: '3', inep: '34567890', nome: 'E.M. Clarice Lispector', endereco: 'Praça da Paz, 10', codigoGestor: 'CL-7723', codigoAcesso: '1234', turnosFuncionamento: [Turno.MANHA, Turno.TARDE], donoId: 'dono1' }
 ];
 
 export const FUNCIONARIOS_INICIAIS: Funcionario[] = [
@@ -20,7 +21,9 @@ export const FUNCIONARIOS_INICIAIS: Funcionario[] = [
     possuiDobra: true,
     presencaConfirmada: true,
     tipoLotacao: TipoLotacao.DEFINITIVA,
-    turno: Turno.MANHA,
-    cargaHorariaSemanal: 40
+    // Fix: changed 'turno' to 'turnos' (array), 'cargaHorariaSemanal' to 'cargaHoraria', and added 'donoId'
+    turnos: [Turno.MANHA],
+    cargaHoraria: 40,
+    donoId: 'dono1'
   }
 ];

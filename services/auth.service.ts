@@ -10,7 +10,6 @@ export const authService = {
     return localStorage.getItem(FORCE_DEMO_KEY) === 'true' || !isSupabaseConfigured();
   },
 
-  // Fix: Corrected localStorage.setItem to accept two arguments and removed invalid comparison.
   setDemoMode(active: boolean) {
     if (active) localStorage.setItem(FORCE_DEMO_KEY, 'true');
     else localStorage.removeItem(FORCE_DEMO_KEY);

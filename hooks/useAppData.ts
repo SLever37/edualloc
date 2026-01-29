@@ -30,31 +30,11 @@ export const useAppData = (
         schoolService.getAll(donoId)
       ]);
 
-      setFuncionarios(fData.map((f: any) => ({
-        ...f,
-        funcaoId: f.funcao_id,
-        setorId: f.setor_id,
-        escolaId: f.escola_id,
-        possuiDobra: f.possui_dobra,
-        presencaConfirmada: f.presenca_confirmada,
-        tipoLotacao: f.tipo_lotacao || 'Definitiva',
-        turno: f.turno || 'Manhã',
-        cargaHorariaSemanal: f.carga_horaria || 40,
-        observacaoFrequencia: f.observacao_frequencia, 
-        atestadoUrl: f.atestado_url,
-        donoId: f.dono_id,
-        fotoUrl: f.foto_url
-      })));
-
-      setEscolas(eData.map((e: any) => ({
-        ...e,
-        codigoGestor: e.codigo_gestor,
-        codigoAcesso: e.codigo_acesso,
-        donoId: e.dono_id
-      })));
+      setFuncionarios(fData);
+      setEscolas(eData);
 
     } catch (e) {
-      console.error("Erro no carregamento de dados:", e);
+      console.error("Erro crítico no carregamento de dados:", e);
     }
   }, [donoId, carregarCatalogos]);
 
@@ -63,43 +43,68 @@ export const useAppData = (
   }, [recarregarDados]);
 
   const salvarFuncionario = async (dados: Partial<Funcionario>, foto?: File) => {
-    if (!donoId) {
-        alert("Sessão inválida. Tente recarregar a página.");
-        return;
+    if (!donoId) return;
+    try {
+        await employeeService.save(dados, donoId, foto);
+        await recarregarDados();
+    } catch (e: any) {
+        alert(e.message);
+        throw e;
     }
-    await employeeService.save(dados, donoId, foto);
-    await recarregarDados();
   };
 
   const removerFuncionario = async (id: string) => {
     if (!donoId) return;
-    await employeeService.delete(id);
-    await recarregarDados();
+    try {
+        await employeeService.delete(id);
+        await recarregarDados();
+    } catch (e: any) {
+        alert("Erro ao remover: " + e.message);
+    }
   };
 
   const salvarEscola = async (dados: Partial<Escola>) => {
     if (!donoId) return;
-    await schoolService.upsert(dados, donoId);
-    await recarregarDados();
+    try {
+        await schoolService.upsert(dados, donoId);
+        await recarregarDados();
+    } catch (e: any) {
+        alert(e.message);
+        throw e;
+    }
   };
 
   const removerEscola = async (id: string) => {
     if (!donoId) return;
-    await schoolService.delete(id);
-    await recarregarDados();
+    try {
+        await schoolService.delete(id);
+        await recarregarDados();
+    } catch (e: any) {
+        alert("Erro ao remover unidade: " + e.message);
+    }
   };
 
   const alternarPresenca = async (id: string, ocorrencia: OcorrenciaFrequencia, observacao?: string, statusGeral?: StatusFuncionario, arquivo?: File) => {
     if (!donoId) return;
-    await employeeService.registrarFrequencia(id, ocorrencia, donoId, observacao, statusGeral, arquivo);
-    await recarregarDados();
+    try {
+        await employeeService.registrarFrequencia(id, ocorrencia, donoId, observacao, statusGeral, arquivo);
+        await recarregarDados();
+    } catch (e: any) {
+        alert("Erro ao registrar frequência: " + e.message);
+    }
   };
 
   const importarEmLote = async (listaFuncionarios: Partial<Funcionario>[]) => {
     if (!donoId) return;
+    let erros = 0;
     for (const func of listaFuncionarios) {
-      await employeeService.save(func, donoId);
+      try {
+        await employeeService.save(func, donoId);
+      } catch (e) {
+        erros++;
+      }
     }
+    if (erros > 0) alert(`${erros} registros falharam na importação.`);
     await recarregarDados();
   };
 

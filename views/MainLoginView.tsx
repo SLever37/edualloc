@@ -39,6 +39,8 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
 
   const handleDemoMode = async () => {
     onClearMessages();
+    // Limpa estados de auth anteriores para evitar conflitos
+    localStorage.removeItem('sb-bucutqjribdrqkvwmxbb-auth-token'); 
     localStorage.setItem('edualloc_force_demo', 'true');
     await onAdminLogin('demo@edualloc.app', 'demo123', false);
     // Recarrega para garantir que os hooks de auth peguem a mudança de estado local
@@ -48,7 +50,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
   const isLoadingAny = loading || googleLoading;
 
   // Verifica se o erro é relacionado a configuração do Supabase
-  const isConfigError = error.includes('desativado') || error.includes('confirmado') || error.includes('not confirmed');
+  const isConfigError = error.includes('confirmado') || error.includes('not confirmed') || error.includes('disabled');
 
   return (
     <div className="h-full w-full bg-slate-950 flex flex-col items-center justify-center p-4 relative font-sans overflow-y-auto custom-scrollbar">
@@ -58,29 +60,48 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
           <div className="absolute bottom-[-20%] left-[-10%] w-[800px] h-[800px] bg-emerald-600 rounded-full opacity-10 blur-[150px] animate-pulse" style={{animationDelay: '1s'}}></div>
       </div>
 
+      {/* Banner de Atalho Demo (Sempre visível para facilitar) */}
+      <div className="relative z-50 mb-6 w-full max-w-md animate-in slide-in-from-top-4 duration-700">
+          <button 
+            onClick={handleDemoMode}
+            className="w-full bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 backdrop-blur-md p-3 rounded-2xl flex items-center justify-between group transition-all"
+          >
+              <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                  </div>
+                  <div className="text-left">
+                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">Acesso Rápido</p>
+                      <p className="text-xs font-bold text-white">Entrar sem configurar banco de dados</p>
+                  </div>
+              </div>
+              <svg className="text-indigo-400 group-hover:translate-x-1 transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+      </div>
+
       <div className="max-w-md w-full bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in duration-500 relative z-50 border border-white/40 my-auto shrink-0">
         
-        <div className="p-12 pb-6 text-center">
-          <div className="w-20 h-20 bg-slate-900 text-white rounded-[1.8rem] flex items-center justify-center mx-auto mb-6 shadow-2xl transform hover:rotate-6 transition-transform duration-500">
-             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <div className="p-10 pb-6 text-center">
+          <div className="w-16 h-16 bg-slate-900 text-white rounded-[1.4rem] flex items-center justify-center mx-auto mb-4 shadow-xl transform hover:rotate-6 transition-transform duration-500">
+             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
           </div>
           <h1 className="text-3xl font-black tracking-tighter text-slate-900">
             Edu<span className="text-indigo-600">Alloc</span>
           </h1>
-          <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mt-3 opacity-70">Gestão de Lotação Escolar</p>
+          <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mt-2 opacity-70">Gestão de Lotação Escolar</p>
         </div>
 
-        <div className="px-10 pb-12">
-          <div className="space-y-5">
+        <div className="px-10 pb-10">
+          <div className="space-y-4">
             
             <button
                 type="button"
                 disabled={isLoadingAny}
                 onClick={handleGoogleLogin}
-                className="w-full h-14 bg-white border-2 border-slate-100 hover:border-indigo-100 hover:bg-slate-50 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-sm disabled:opacity-50"
+                className="w-full h-12 bg-white border-2 border-slate-100 hover:border-indigo-100 hover:bg-slate-50 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-sm disabled:opacity-50"
             >
                 {googleLoading ? (
-                    <div className="w-5 h-5 border-2 border-slate-300 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-slate-300 border-t-indigo-600 rounded-full animate-spin"></div>
                 ) : (
                     <>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -89,14 +110,14 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                             <path d="M5.27 14.59C5.02 13.85 4.88 13.06 4.88 12.25C4.88 11.44 5.02 10.65 5.27 9.91L5.26 9.76L1.51 6.86L1.46 6.96C0.53 8.81 0 10.9 0 13C0 15.1 0.53 17.19 1.46 19.04L5.27 14.59Z" fill="#FBBC05"/>
                             <path d="M12 4.96999C14.23 4.96999 15.75 5.92999 16.61 6.72999L19.89 3.51999C17.84 1.61999 15.17 0.469986 12 0.469986C7.37 0.469986 3.33 2.93999 1.36 6.84999L5.17 9.80999C6.16 6.97999 8.85 4.96999 12 4.96999Z" fill="#EA4335"/>
                         </svg>
-                        <span className="text-sm">Entrar com Google</span>
+                        <span className="text-sm">Google</span>
                     </>
                 )}
             </button>
 
             <div className="flex items-center gap-4">
                 <div className="h-px bg-slate-100 flex-1"></div>
-                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Ou use e-mail</span>
+                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Ou e-mail</span>
                 <div className="h-px bg-slate-100 flex-1"></div>
             </div>
 
@@ -106,7 +127,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                     <input 
                         type="email" 
                         required 
-                        className="w-full h-14 px-5 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all placeholder:text-slate-300"
+                        className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all placeholder:text-slate-300"
                         placeholder="seu@email.com"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
@@ -117,7 +138,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                     <input 
                         type="password" 
                         required 
-                        className="w-full h-14 px-5 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all placeholder:text-slate-300"
+                        className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-800 outline-none focus:border-indigo-500 transition-all placeholder:text-slate-300"
                         placeholder="••••••••"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
@@ -129,16 +150,16 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                         {error}
                         {isConfigError && (
                             <div className="mt-3 p-3 bg-white/50 rounded-xl border border-rose-200">
-                                <p className="text-[10px] font-black uppercase text-indigo-600 mb-2">Dica de Desenvolvedor:</p>
-                                <p className="text-[10px] text-slate-500 font-medium mb-3">
-                                    No painel Supabase, vá em <strong>Authentication > Providers > Email</strong> e desative a opção <strong>"Confirm Email"</strong> para testar sem verificação.
+                                <p className="text-[10px] font-black uppercase text-indigo-600 mb-1">Como resolver:</p>
+                                <p className="text-[10px] text-slate-500 font-medium mb-3 leading-tight">
+                                    No painel Supabase, vá em <strong>Auth > Providers > Email</strong> e desative <strong>"Confirm Email"</strong>.
                                 </p>
                                 <button 
                                     type="button"
                                     onClick={handleDemoMode}
-                                    className="w-full py-2 bg-indigo-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 transition shadow-sm"
+                                    className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 transition shadow-sm"
                                 >
-                                    Ignorar e Acessar Modo Demo
+                                    Entrar no Modo Demo Agora
                                 </button>
                             </div>
                         )}
@@ -148,29 +169,19 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
                 <button 
                     type="submit" 
                     disabled={isLoadingAny}
-                    className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-indigo-100 transition-all transform active:scale-95 disabled:opacity-50"
+                    className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl transition-all transform active:scale-95 disabled:opacity-50"
                 >
-                    {loading ? 'Processando...' : (isSignUp ? 'Criar Conta' : 'Entrar')}
+                    {loading ? 'Aguarde...' : (isSignUp ? 'Criar Conta' : 'Entrar')}
                 </button>
 
-                <div className="grid grid-cols-1 gap-2 text-center pt-2">
+                <div className="text-center pt-2">
                     <button 
                         type="button" 
                         onClick={() => { setIsSignUp(!isSignUp); onClearMessages(); }} 
                         className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest p-2 transition-colors"
                     >
-                        {isSignUp ? 'Já tem conta? Login' : 'Novo por aqui? Cadastrar'}
+                        {isSignUp ? 'Já tem conta? Login' : 'Novo aqui? Cadastrar'}
                     </button>
-                    
-                    {!isConfigError && (
-                        <button 
-                            type="button" 
-                            onClick={handleDemoMode}
-                            className="text-[10px] font-black text-emerald-500 hover:text-emerald-700 uppercase tracking-widest p-2 border border-emerald-100 rounded-xl bg-emerald-50/30 transition-all"
-                        >
-                            Acessar como Convidado (Demo)
-                        </button>
-                    )}
                 </div>
             </form>
           </div>
@@ -178,7 +189,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
       </div>
       
       <p className="mt-8 text-slate-500 text-[10px] font-bold opacity-40 uppercase tracking-widest">
-        EduAlloc RH • 2024
+        EduAlloc RH • v2.0
       </p>
     </div>
   );
