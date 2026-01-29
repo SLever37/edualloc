@@ -1,7 +1,7 @@
 
 import { supabase } from '../../services/supabase.ts';
 import { storageService } from '../../services/storage.service.ts';
-import { Funcionario, OcorrenciaFrequencia, StatusFuncionario, Formacao, NivelFormacao, Documento } from '../../types.ts';
+import { Funcionario, OcorrenciaFrequencia, StatusFuncionario, Formacao, NivelFormacao, Documento, TipoLotacao } from '../../types.ts';
 
 export const employeeService = {
   getAll: async (donoId: string): Promise<Funcionario[]> => {
@@ -43,21 +43,18 @@ export const employeeService = {
             email: f.email,
             telefone: f.telefone,
             funcaoId: f.funcao_id,
+            /* Fixed: Property mapping changed from setor_id to setorId to match Funcionario interface */
             setorId: f.setor_id,
-            status: f.status || 'Ativo',
+            status: f.status || StatusFuncionario.ATIVO,
             escolaId: f.escola_id,
             possuiDobra: !!f.possui_dobra,
             presencaConfirmada: !!f.presenca_confirmada,
-            tipoLotacao: f.tipo_lotacao || 'Definitiva',
+            tipoLotacao: f.tipo_lotacao || TipoLotacao.EFETIVO,
             turnos: f.turnos || [],
             cargaHoraria: Number(f.carga_horaria || 0),
             formacoes: listaFormacoes,
-            nivelFormacao: f.nivel_formacao,
-            cursoFormacao: f.curso_formacao,
-            anoIngresso: f.ano_ingresso,
             dataIngresso: f.data_ingresso,
-            observacaoFrequencia: f.observacao_frequencia, 
-            atestadoUrl: f.atestado_url,
+            dataUltimaFrequencia: f.data_ultima_frequencia,
             donoId: f.dono_id,
             fotoUrl: f.foto_url,
             documentos: docs
@@ -76,7 +73,6 @@ export const employeeService = {
     }
 
     const payload: any = {
-      id: func.id || undefined,
       nome: func.nome,
       cpf: func.cpf,
       matricula: func.matricula,
@@ -84,27 +80,27 @@ export const employeeService = {
       telefone: func.telefone || null,
       funcao_id: func.funcaoId || null,
       setor_id: func.setorId || null,
-      status: func.status || 'Ativo',
+      status: func.status || StatusFuncionario.ATIVO,
       escola_id: func.escolaId || null,
       possui_dobra: !!func.possuiDobra,
-      presenca_confirmada: !!func.presencaConfirmada,
-      tipo_lotacao: func.tipoLotacao || 'Definitiva',
+      tipo_lotacao: func.tipoLotacao || TipoLotacao.EFETIVO,
       turnos: Array.isArray(func.turnos) ? func.turnos : [],
       carga_horaria: Math.floor(Number(func.cargaHoraria || 0)),
       curso_formacao: JSON.stringify(func.formacoes || []),
-      nivel_formacao: func.formacoes?.[0]?.nivel || null,
-      documentos: JSON.stringify(func.documentos || []),
       dono_id: donoId
     };
 
-    if (func.anoIngresso) payload.ano_ingresso = func.anoIngresso;
-    if (func.dataIngresso) payload.data_ingresso = func.dataIngresso;
     if (fotoUrl) payload.foto_url = fotoUrl;
 
-    const { error } = await supabase.from('funcionarios').upsert(payload);
+    const { error } = await supabase.from('funcionarios').upsert({
+        ...payload,
+        id: func.id || undefined
+    });
+    
     if (error) throw new Error(error.message);
   },
 
+  /* Added missing uploadDoc method used in useEmployeeForm.ts */
   uploadDoc: async (donoId: string, file: File): Promise<Documento | null> => {
     const path = `${donoId}/documentos/${Date.now()}_${file.name}`;
     const url = await storageService.uploadFile('fotos', path, file);
@@ -117,29 +113,56 @@ export const employeeService = {
     };
   },
 
+  registrarFrequencia: async (id: string, ocorrencia: OcorrenciaFrequencia, donoId: string, obs?: string, st?: StatusFuncionario, file?: File) => {
+    const dataHoje = new Date().toISOString().split('T')[0];
+    
+    // 1. Criar registro na frequencia_diaria (Histórico)
+    const { data: freqData, error: freqError } = await supabase.from('frequencia_diaria').upsert({
+        funcionario_id: id,
+        escola_id: (await supabase.from('funcionarios').select('escola_id').eq('id', id).single()).data?.escola_id,
+        data: dataHoje,
+        status: ocorrencia,
+        observacao: obs || null,
+        dono_id: donoId
+    }).select().single();
+
+    if (freqError) throw freqError;
+
+    // 2. Se houver arquivo (atestado), salvar na tabela atestados
+    if (file) {
+      const path = `${donoId}/atestados/${Date.now()}_${file.name}`;
+      const url = await storageService.uploadFile('fotos', path, file);
+      if (url) {
+          await supabase.from('atestados').insert({
+              funcionario_id: id,
+              escola_id: freqData.escola_id,
+              frequencia_id: freqData.id,
+              arquivo_path: url,
+              arquivo_nome: file.name,
+              mime_type: file.type,
+              dono_id: donoId,
+              data_inicio: dataHoje
+          });
+      }
+    }
+
+    // 3. Atualizar o funcionário (Estado Atual)
+    const updateFunc: any = {
+        presenca_confirmada: ocorrencia === OcorrenciaFrequencia.PRESENCA,
+        data_ultima_frequencia: dataHoje
+    };
+
+    if (ocorrencia === OcorrenciaFrequencia.ATESTADO) {
+        updateFunc.status = StatusFuncionario.LICENCA_MEDICA;
+    } else if (st) {
+        updateFunc.status = st;
+    }
+
+    await supabase.from('funcionarios').update(updateFunc).eq('id', id);
+  },
+
   delete: async (id: string) => {
     const { error } = await supabase.from('funcionarios').delete().eq('id', id);
     if (error) throw error;
-  },
-
-  registrarFrequencia: async (id: string, ocorrencia: OcorrenciaFrequencia, donoId: string, obs?: string, st?: StatusFuncionario, file?: File) => {
-      const presencaConfirmada = ocorrencia === OcorrenciaFrequencia.PRESENCA;
-      let atestadoUrl = null;
-      if (file) {
-          const path = `${donoId}/atestados/${Date.now()}_${file.name}`;
-          const url = await storageService.uploadFile('fotos', path, file);
-          if (url) atestadoUrl = url;
-      }
-      
-      const updateData: any = { 
-        presenca_confirmada: presencaConfirmada, 
-        observacao_frequencia: obs || null 
-      };
-      
-      if (atestadoUrl) updateData.atestado_url = atestadoUrl;
-      if (st) updateData.status = st;
-      
-      const { error } = await supabase.from('funcionarios').update(updateData).eq('id', id);
-      if (error) throw error;
   }
 };

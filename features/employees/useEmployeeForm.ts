@@ -20,7 +20,8 @@ export const useEmployeeForm = (
     funcaoId: roles[0]?.id || '', setorId: sectors[0]?.id || '',
     status: StatusFuncionario.ATIVO, escolaId: schools[0]?.id || '',
     possuiDobra: false,
-    tipoLotacao: TipoLotacao.DEFINITIVA,
+    // Fix: Property 'DEFINITIVA' does not exist on type 'typeof TipoLotacao'. Changed to 'EFETIVO'.
+    tipoLotacao: TipoLotacao.EFETIVO,
     turnos: [Turno.MANHA],
     cargaHoraria: 20,
     formacoes: [],

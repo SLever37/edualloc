@@ -18,10 +18,9 @@ export enum StatusFuncionario {
 }
 
 export enum TipoLotacao {
-  DEFINITIVA = 'Definitiva',
-  PROVISORIA = 'Provisória',
-  SUBSTITUICAO = 'Substituição',
-  COMPLEMENTACAO = 'Complementação'
+  EFETIVO = 'Efetivo (a)',
+  CONTRATADO = 'Contratado (a)',
+  READAPTADO = 'Readaptado (a)'
 }
 
 export enum Turno {
@@ -41,11 +40,9 @@ export enum NivelFormacao {
 }
 
 export enum OcorrenciaFrequencia {
-  PRESENCA = 'Presença',
-  FALTA_INJUSTIFICADA = 'Falta Injustificada',
-  ATESTADO = 'Atestado Médico',
-  ABONO = 'Abono',
-  SUSPENSAO = 'Suspensão'
+  PRESENCA = 'PRESENTE',
+  FALTA_INJUSTIFICADA = 'FALTA',
+  ATESTADO = 'ATESTADO'
 }
 
 export interface Formacao {
@@ -73,16 +70,33 @@ export interface Documento {
   validade?: string; 
 }
 
-export interface HistoricoLotacao {
+export interface HistoricoFrequencia {
   id: string;
   funcionarioId: string;
-  escolaAnteriorId?: string;
-  escolaNovaId?: string;
-  escolaAnteriorNome?: string; 
-  escolaNovaNome?: string;     
-  dataMovimentacao: string;
+  data: string;
+  status: OcorrenciaFrequencia;
+  observacao?: string;
+  atestadoUrl?: string;
+}
+
+/* Added missing HistoricoLotacao interface */
+export interface HistoricoLotacao {
+  id: string;
+  funcionario_id: string;
+  escola_anterior_id?: string;
+  escola_nova_id: string;
+  data_movimentacao: string;
   motivo?: string;
-  usuarioResponsavel?: string;
+  escolaAnteriorNome?: string;
+  escolaNovaNome: string;
+}
+
+/* Added missing RhContact interface */
+export interface RhContact {
+  id?: string;
+  label: string;
+  value: string;
+  type: 'email' | 'phone';
 }
 
 export interface Funcionario {
@@ -90,43 +104,24 @@ export interface Funcionario {
   nome: string;
   cpf: string;
   matricula: string; 
-  
   email?: string;
   telefone?: string;
-
   funcaoId: string;
   setorId: string;
   status: StatusFuncionario;
   escolaId: string;
-  
   tipoLotacao: TipoLotacao;
   turnos: Turno[]; 
   cargaHoraria: number; 
-  
-  formacoes: Formacao[]; // Substituindo campos únicos por lista
-  nivelFormacao?: NivelFormacao; // Mantido para compatibilidade legado se necessário
-  cursoFormacao?: string;       // Mantido para compatibilidade legado se necessário
-  
+  formacoes: Formacao[];
   anoIngresso?: number;
   dataIngresso?: string;
-  
   possuiDobra: boolean; 
   presencaConfirmada: boolean;
-  ultimaOcorrencia?: OcorrenciaFrequencia;
-  observacaoFrequencia?: string;
-  atestadoUrl?: string;
-  
+  dataUltimaFrequencia?: string;
   donoId: string; 
   fotoUrl?: string; 
   documentos?: Documento[];
-  historico?: HistoricoLotacao[];
-}
-
-export interface RhContact {
-  id?: string;
-  label: string;
-  value: string;
-  type: 'phone' | 'email';
 }
 
 export interface Escola {

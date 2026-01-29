@@ -19,7 +19,8 @@ export const FUNCIONARIOS_INICIAIS: Funcionario[] = [
     escolaId: '1',
     possuiDobra: true,
     presencaConfirmada: true,
-    tipoLotacao: TipoLotacao.DEFINITIVA,
+    // Fix: Property 'DEFINITIVA' does not exist on type 'typeof TipoLotacao'. Changed to 'EFETIVO'.
+    tipoLotacao: TipoLotacao.EFETIVO,
     turnos: [Turno.MANHA],
     cargaHoraria: 40,
     // Fix: Adding required 'formacoes' property to satisfy Funcionario interface requirement

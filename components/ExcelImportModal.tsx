@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Escola, Funcao, Setor, Funcionario, StatusFuncionario, TipoLotacao, Turno } from '../types.ts';
 
@@ -85,7 +86,8 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ escolas, funcoes, s
         funcaoId: funcaoEncontrada?.id || funcoes[0]?.id || '',
         setorId: setores[0]?.id || '',
         status: StatusFuncionario.ATIVO,
-        tipoLotacao: TipoLotacao.DEFINITIVA,
+        // Fix: Property 'DEFINITIVA' does not exist on type 'typeof TipoLotacao'. Changed to 'EFETIVO'.
+        tipoLotacao: TipoLotacao.EFETIVO,
         turnos: [Turno.MANHA],
         cargaHoraria: 40,
         possuiDobra: false,
