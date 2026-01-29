@@ -1,24 +1,24 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Funcionario, Escola, Perfil } from './types';
-import { useAuth } from './hooks/useAuth';
-import { useAppData } from './hooks/useAppData';
-import { checkDatabaseConnection, supabase } from './services/supabase';
+import { Funcionario, Escola, Perfil } from './types.ts';
+import { useAuth } from './hooks/useAuth.ts';
+import { useAppData } from './hooks/useAppData.ts';
+import { checkDatabaseConnection } from './services/supabase.ts';
 
 // Views & Components
-import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import SchoolPortal from './components/SchoolPortal';
-import EmployeeModal from './components/EmployeeModal';
-import SchoolModal from './components/SchoolModal';
-import PessoalView from './views/PessoalView';
-import EscolasView from './views/EscolasView';
-import ConfiguracoesView from './views/ConfiguracoesView';
-import SchoolDirectLoginView from './views/SchoolDirectLoginView';
-import MainLoginView from './views/MainLoginView';
-import UsuariosView from './views/UsuariosView';
-import PerfilView from './views/PerfilView';
-import AuthCallbackView from './views/AuthCallbackView';
+import Layout from './components/Layout.tsx';
+import Dashboard from './components/Dashboard.tsx';
+import SchoolPortal from './components/SchoolPortal.tsx';
+import EmployeeModal from './components/EmployeeModal.tsx';
+import SchoolModal from './components/SchoolModal.tsx';
+import PessoalView from './views/PessoalView.tsx';
+import EscolasView from './views/EscolasView.tsx';
+import ConfiguracoesView from './views/ConfiguracoesView.tsx';
+import SchoolDirectLoginView from './views/SchoolDirectLoginView.tsx';
+import MainLoginView from './views/MainLoginView.tsx';
+import UsuariosView from './views/UsuariosView.tsx';
+import PerfilView from './views/PerfilView.tsx';
+import AuthCallbackView from './views/AuthCallbackView.tsx';
 
 const App: React.FC = () => {
   const { 

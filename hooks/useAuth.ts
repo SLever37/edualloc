@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../services/supabase';
-import { authService } from '../services/auth.service';
-import { Usuario } from '../types';
+import { supabase } from '../services/supabase.ts';
+import { authService } from '../services/auth.service.ts';
+import { Usuario } from '../types.ts';
 
 const FALLBACK_KEY = 'edualloc_fallback_user';
 
@@ -19,15 +19,23 @@ export const useAuth = () => {
       console.error("Erro ao carregar sessão inicial:", e);
       setUsuario(null);
     } finally {
-      // Garantia de que o loader sempre fecha
       setLoadingSession(false);
     }
   };
 
   useEffect(() => {
+    // Timeout de segurança: se o Supabase não responder em 6s, libera o app
+    const timer = setTimeout(() => {
+      if (loadingSession) {
+        console.warn("Auth timeout atingido. Liberando tela.");
+        setLoadingSession(false);
+      }
+    }, 6000);
+
     carregarSessao();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.debug("Auth Event:", event);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         try {
           const user = await authService.getSessionUser(session);
@@ -42,6 +50,7 @@ export const useAuth = () => {
     });
 
     return () => {
+        clearTimeout(timer);
         subscription.unsubscribe();
     };
   }, []);
@@ -79,7 +88,6 @@ export const useAuth = () => {
     setAuthError('');
     try {
         await authService.loginWithGoogle();
-        // O redirecionamento é tratado pelo onAuthStateChange
     } catch (e: any) {
         setAuthError(e.message || "Erro ao conectar com Google");
     }
