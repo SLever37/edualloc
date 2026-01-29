@@ -63,10 +63,12 @@ export const useAppData = (
     }
   };
 
-  const salvarEscola = async (dados: Partial<Escola>) => {
+  // Fix: Updated salvarEscola to accept an optional logo file as a second argument, 
+  // resolving parameter count mismatch in components calling this hook.
+  const salvarEscola = async (dados: Partial<Escola>, logo?: File) => {
     if (!donoId) return;
     try {
-        await schoolService.upsert(dados, donoId);
+        await schoolService.upsert(dados, donoId, logo);
         await recarregarDados();
     } catch (e: any) {
         alert(e.message);

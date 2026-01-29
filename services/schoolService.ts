@@ -1,6 +1,6 @@
 
-import { supabase } from './base';
-import { Escola } from '../types';
+import { supabase, uploadFile } from './base';
+import { Escola, RhContact } from '../types';
 
 const getLocal = (key: string) => JSON.parse(localStorage.getItem(key) || '[]');
 const setLocal = (key: string, data: any[]) => localStorage.setItem(key, JSON.stringify(data));
@@ -19,10 +19,13 @@ export const schoolService = {
             inep: e.inep,
             nome: e.nome,
             endereco: e.endereco,
-            turnosFuncionamento: e.turnos_funcionamento || [],
+            turnosFuncionamento: e.turnos_functionamento || [],
             codigoGestor: e.codigo_gestor,
             codigoAcesso: e.codigo_acesso,
-            donoId: e.dono_id
+            donoId: e.dono_id,
+            notasUnidade: e.notas_unidade,
+            logoUrl: e.logo_url,
+            contatosRh: e.contatos_rh || []
         }));
     } catch (e) {
         console.error("Erro ao buscar escolas:", e);
@@ -30,53 +33,45 @@ export const schoolService = {
     }
   },
   
-  upsert: async (escola: Partial<Escola>, donoId: string) => {
-    // 1. Validação de INEP (Frontend Guard)
-    const inepRegex = /^[0-9]{8}$/;
-    if (!escola.inep || !inepRegex.test(escola.inep)) {
-        throw new Error("INEP deve ter exatamente 8 dígitos numéricos.");
+  upsert: async (escola: Partial<Escola>, donoId: string, logoFile?: File) => {
+    let logoUrl = escola.logoUrl;
+    if (logoFile) {
+        const path = `${donoId}/escolas/${escola.id || 'new'}_logo_${Date.now()}`;
+        const url = await uploadFile('fotos', path, logoFile);
+        if (url) logoUrl = url;
     }
 
     const id = escola.id || crypto.randomUUID();
-    const payload = {
+    const payload: any = {
         id,
-        inep: escola.inep,
-        nome: escola.nome,
-        endereco: escola.endereco,
-        turnos_funcionamento: escola.turnosFuncionamento || [], // text[]
-        codigo_gestor: escola.codigoGestor,
-        codigo_acesso: escola.codigoAcesso,
         dono_id: donoId
     };
+
+    if (escola.inep) payload.inep = escola.inep;
+    if (escola.nome) payload.nome = escola.nome;
+    if (escola.endereco) payload.endereco = escola.endereco;
+    if (escola.turnosFuncionamento) payload.turnos_funcionamento = escola.turnosFuncionamento;
+    if (escola.codigoGestor) payload.codigo_gestor = escola.codigoGestor;
+    if (escola.codigoAcesso) payload.codigo_acesso = escola.codigoAcesso;
+    if (escola.notasUnidade !== undefined) payload.notas_unidade = escola.notasUnidade;
+    if (logoUrl) payload.logo_url = logoUrl;
+    if (escola.contatosRh) payload.contatos_rh = escola.contatosRh;
 
     const { error } = await supabase.from('escolas').upsert(payload);
 
     if (error) {
-        // 2. Tratamento de erros de banco (Postgres Codes)
-        if (error.code === '23505') throw new Error(`O INEP ${escola.inep} já está cadastrado nesta rede.`);
-        if (error.code === '23502') throw new Error("Campos obrigatórios ausentes (INEP/Dono).");
-        if (error.message.includes('escolas_inep_formato_ck')) throw new Error("Formato de INEP inválido no banco.");
         throw new Error(error.message);
     }
 
-    // Cache Local para Resiliência
     const current = getLocal(`edualloc_escolas_${donoId}`);
     const index = current.findIndex((x: any) => x.id === id);
-    const localPayload = { ...escola, id, donoId };
-    if (index >= 0) current[index] = localPayload; else current.push(localPayload);
+    const localPayload = { ...escola, id, donoId, logoUrl };
+    if (index >= 0) current[index] = { ...current[index], ...localPayload }; else current.push(localPayload);
     setLocal(`edualloc_escolas_${donoId}`, current);
   },
 
   delete: async (id: string) => {
     const { error } = await supabase.from('escolas').delete().eq('id', id);
     if (error) throw error;
-    
-    Object.keys(localStorage).forEach(key => {
-        if(key.startsWith('edualloc_escolas_')) {
-            const list = JSON.parse(localStorage.getItem(key) || '[]');
-            const newList = list.filter((x: any) => x.id !== id);
-            localStorage.setItem(key, JSON.stringify(newList));
-        }
-    });
   }
 };

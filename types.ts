@@ -101,7 +101,7 @@ export interface Funcionario {
   nivelFormacao?: NivelFormacao;
   cursoFormacao?: string;
   anoIngresso?: number;
-  dataIngresso?: string; // NOVO CAMPO
+  dataIngresso?: string;
   
   possuiDobra: boolean; 
   presencaConfirmada: boolean;
@@ -115,6 +115,12 @@ export interface Funcionario {
   historico?: HistoricoLotacao[];
 }
 
+export interface RhContact {
+  label: string;
+  value: string;
+  type: 'phone' | 'email';
+}
+
 export interface Escola {
   id: string;
   inep: string; 
@@ -124,6 +130,9 @@ export interface Escola {
   codigoGestor: string;
   codigoAcesso: string;
   donoId: string;
+  notasUnidade?: string;
+  logoUrl?: string;
+  contatosRh?: RhContact[];
 }
 
 export interface Usuario {
