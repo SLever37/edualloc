@@ -120,7 +120,7 @@ const MainLoginView: React.FC<MainLoginViewProps> = ({
           </div>
         </div>
       </div>
-      <p className="mt-8 text-slate-500 text-[10px] font-bold opacity-40 uppercase tracking-widest">EduAlloc RH • v2.0 • Português (Brasil)</p>
+      <p className="mt-8 text-slate-500 text-[10px] font-bold opacity-40 uppercase tracking-widest">Criado por Sócrates Lever</p>
     </div>
   );
 };
