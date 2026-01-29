@@ -78,7 +78,6 @@ export const authService = {
           escolaId: created.escola_id
         };
       } else {
-        // Atualiza apenas se houver sessão para não falhar em modo offline
         if (session) {
             supabase
               .from('perfis')
@@ -92,3 +91,117 @@ export const authService = {
           nome: perfilData.nome || usuarioBase.nome,
           email: perfilData.email || usuarioBase.email,
           perfil: (perfilData.perfil as Perfil) || usuarioBase.perfil,
+          donoId: perfilData.dono_id || usuarioBase.donoId,
+          escolaId: perfilData.escola_id || usuarioBase.escolaId
+        };
+      }
+    } catch (err) {
+      console.error("Erro na sincronização de perfil:", err);
+    }
+
+    return usuarioBase;
+  },
+
+  async loginEscola(codigoGestor: string, codigoAcesso: string) {
+    if (this.isDemoMode()) {
+      const user: Usuario = {
+        id: 'demo-gestor',
+        nome: 'Gestor Unidade (Demo)',
+        email: `${codigoGestor.toLowerCase()}@edualloc.app`,
+        perfil: Perfil.GESTOR_ESCOLAR,
+        donoId: 'demo-org-local',
+        escolaId: '1'
+      };
+      localStorage.setItem(FALLBACK_KEY, JSON.stringify(user));
+      return { success: true, user };
+    }
+
+    const { data: escola, error } = await supabase
+      .from('escolas')
+      .select('*')
+      .eq('codigo_gestor', codigoGestor)
+      .eq('codigo_acesso', codigoAcesso)
+      .single();
+
+    if (error || !escola) {
+      throw new Error("Credenciais da unidade inválidas ou não encontradas.");
+    }
+
+    const gestorUser: Usuario = {
+      id: `gestor-${escola.id}`,
+      nome: `Gestor ${escola.nome}`,
+      email: `${escola.codigo_gestor.toLowerCase()}@edualloc.app`,
+      perfil: Perfil.GESTOR_ESCOLAR,
+      donoId: escola.dono_id,
+      escolaId: escola.id
+    };
+
+    localStorage.setItem(FALLBACK_KEY, JSON.stringify(gestorUser));
+    return { success: true, user: gestorUser };
+  },
+
+  async loginAdmin(email: string, pass: string, isSignUp: boolean) {
+    if (this.isDemoMode()) {
+        const fallbackUser: Usuario = {
+            id: 'demo-admin',
+            nome: (email.split('@')[0] || 'Gestor RH') + ' (Demo)',
+            email: email,
+            perfil: Perfil.ADMINISTRADOR,
+            donoId: 'demo-org-local'
+        };
+        localStorage.setItem(FALLBACK_KEY, JSON.stringify(fallbackUser));
+        return { success: true, user: fallbackUser };
+    }
+
+    if (isSignUp) {
+      const { data, error } = await supabase.auth.signUp({
+        email, 
+        password: pass,
+        options: { 
+          data: { 
+            full_name: email.split('@')[0], 
+            perfil: Perfil.ADMINISTRADOR,
+            dono_id: null 
+          } 
+        }
+      });
+      if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+              throw new Error("Credenciais de login inválidas.");
+          }
+          throw error;
+      }
+      return { success: true, user: data.user };
+    } else {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+              throw new Error("Credenciais de login inválidas.");
+          }
+          throw error;
+      }
+      return { success: true, user: data.user };
+    }
+  },
+
+  async loginWithGoogle() {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  async logout() {
+    localStorage.removeItem(FALLBACK_KEY);
+    localStorage.removeItem(FORCE_DEMO_KEY);
+    try {
+      if (isSupabaseConfigured()) {
+          await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.warn("Erro ao deslogar:", e);
+    }
+  }
+};
