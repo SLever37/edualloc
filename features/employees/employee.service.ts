@@ -43,7 +43,6 @@ export const employeeService = {
             email: f.email,
             telefone: f.telefone,
             funcaoId: f.funcao_id,
-            /* Fixed: Property mapping changed from setor_id to setorId to match Funcionario interface */
             setorId: f.setor_id,
             status: f.status || StatusFuncionario.ATIVO,
             escolaId: f.escola_id,
@@ -100,33 +99,34 @@ export const employeeService = {
     if (error) throw new Error(error.message);
   },
 
-  /* Added missing uploadDoc method used in useEmployeeForm.ts */
-  uploadDoc: async (donoId: string, file: File): Promise<Documento | null> => {
-    const path = `${donoId}/documentos/${Date.now()}_${file.name}`;
-    const url = await storageService.uploadFile('fotos', path, file);
-    if (!url) return null;
-    return {
-      id: crypto.randomUUID(),
-      nome: file.name,
-      url: url,
-      tipo: file.type
-    };
-  },
-
-  registrarFrequencia: async (id: string, ocorrencia: OcorrenciaFrequencia, donoId: string, obs?: string, st?: StatusFuncionario, file?: File) => {
+  registrarFrequencia: async (id: string, ocorrencia: OcorrenciaFrequencia, donoId: string, obs?: string, st?: StatusFuncionario, file?: File, dataInicio?: string, dataFim?: string) => {
     const dataHoje = new Date().toISOString().split('T')[0];
+    const dataAcao = dataInicio || dataHoje;
     
-    // 1. Criar registro na frequencia_diaria (Histórico)
-    const { data: freqData, error: freqError } = await supabase.from('frequencia_diaria').upsert({
-        funcionario_id: id,
-        escola_id: (await supabase.from('funcionarios').select('escola_id').eq('id', id).single()).data?.escola_id,
-        data: dataHoje,
-        status: ocorrencia,
-        observacao: obs || null,
-        dono_id: donoId
-    }).select().single();
+    // Se for atestado, registramos o período
+    const datasParaRegistrar = [];
+    if (ocorrencia === OcorrenciaFrequencia.ATESTADO && dataInicio && dataFim) {
+        let current = new Date(dataInicio);
+        const end = new Date(dataFim);
+        while (current <= end) {
+            datasParaRegistrar.push(new Date(current).toISOString().split('T')[0]);
+            current.setDate(current.getDate() + 1);
+        }
+    } else {
+        datasParaRegistrar.push(dataAcao);
+    }
 
-    if (freqError) throw freqError;
+    // 1. Criar registros na frequencia_diaria
+    for (const dt of datasParaRegistrar) {
+        await supabase.from('frequencia_diaria').upsert({
+            funcionario_id: id,
+            escola_id: (await supabase.from('funcionarios').select('escola_id').eq('id', id).single()).data?.escola_id,
+            data: dt,
+            status: ocorrencia,
+            observacao: obs || null,
+            dono_id: donoId
+        });
+    }
 
     // 2. Se houver arquivo (atestado), salvar na tabela atestados
     if (file) {
@@ -135,13 +135,13 @@ export const employeeService = {
       if (url) {
           await supabase.from('atestados').insert({
               funcionario_id: id,
-              escola_id: freqData.escola_id,
-              frequencia_id: freqData.id,
+              escola_id: (await supabase.from('funcionarios').select('escola_id').eq('id', id).single()).data?.escola_id,
               arquivo_path: url,
               arquivo_nome: file.name,
               mime_type: file.type,
               dono_id: donoId,
-              data_inicio: dataHoje
+              data_inicio: dataInicio || dataHoje,
+              data_fim: dataFim || dataHoje
           });
       }
     }
@@ -159,6 +159,13 @@ export const employeeService = {
     }
 
     await supabase.from('funcionarios').update(updateFunc).eq('id', id);
+  },
+
+  uploadDoc: async (donoId: string, file: File): Promise<Documento | null> => {
+    const path = `${donoId}/documentos/${Date.now()}_${file.name}`;
+    const url = await storageService.uploadFile('fotos', path, file);
+    if (!url) return null;
+    return { id: crypto.randomUUID(), nome: file.name, url: url, tipo: file.type };
   },
 
   delete: async (id: string) => {

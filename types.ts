@@ -86,6 +86,8 @@ export interface HistoricoLotacao {
   escola_anterior_id?: string;
   escola_nova_id: string;
   data_movimentacao: string;
+  // Added dataMovimentacao as it is mapped from data_movimentacao in useEmployeeForm for UI usage
+  dataMovimentacao: string;
   motivo?: string;
   escolaAnteriorNome?: string;
   escolaNovaNome: string;
