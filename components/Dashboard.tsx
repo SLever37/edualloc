@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Funcionario, Escola, StatusFuncionario, Funcao } from '../types';
-import { obterInsightsRH } from '../services/geminiService';
+import { Funcionario, Escola, StatusFuncionario, Funcao } from '../types.ts';
+import { obterInsightsRH } from '../services/geminiService.ts';
 
 interface DashboardProps {
   employees: Funcionario[];
@@ -11,14 +11,14 @@ interface DashboardProps {
 }
 
 const CORES_STATUS: Record<string, string> = {
-  [StatusFuncionario.ATIVO]: '#10b981', // Emerald
-  [StatusFuncionario.INATIVO]: '#94a3b8', // Slate
-  [StatusFuncionario.LICENCA_MEDICA]: '#ef4444', // Red
-  [StatusFuncionario.LICENCA_ESPECIAL]: '#f59e0b', // Amber
-  [StatusFuncionario.LICENCA_MATERNIDADE]: '#ec4899', // Pink
-  [StatusFuncionario.LICENCA_PARTICULAR]: '#6366f1', // Indigo
-  [StatusFuncionario.FERIAS]: '#3b82f6', // Blue
-  [StatusFuncionario.READAPTADO]: '#8b5cf6', // Violet
+  [StatusFuncionario.ATIVO]: '#10b981', 
+  [StatusFuncionario.INATIVO]: '#94a3b8', 
+  [StatusFuncionario.LICENCA_MEDICA]: '#ef4444', 
+  [StatusFuncionario.LICENCA_ESPECIAL]: '#f59e0b', 
+  [StatusFuncionario.LICENCA_MATERNIDADE]: '#ec4899', 
+  [StatusFuncionario.LICENCA_PARTICULAR]: '#6366f1', 
+  [StatusFuncionario.FERIAS]: '#3b82f6', 
+  [StatusFuncionario.READAPTADO]: '#8b5cf6', 
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
@@ -36,7 +36,6 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
     carregarInsights();
   }, [employees]);
 
-  // Cálculo funcional para o gráfico de Rosca (Status)
   const statsPorStatus = useMemo(() => {
     return Object.values(StatusFuncionario).map(status => ({
       name: status,
@@ -44,7 +43,6 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
     })).filter(s => s.value > 0);
   }, [employees]);
 
-  // Cálculo funcional para o gráfico de Barras (Escolas)
   const statsPorEscola = useMemo(() => {
     return schools.map(escola => {
       const staffDaEscola = employees.filter(e => e.escolaId === escola.id);
@@ -54,7 +52,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
         total: staffDaEscola.length,
         ativos: staffDaEscola.filter(e => e.status === StatusFuncionario.ATIVO).length
       };
-    }).sort((a, b) => b.total - a.total).slice(0, 8); // Top 8 escolas para não poluir o gráfico
+    }).sort((a, b) => b.total - a.total).slice(0, 8);
   }, [employees, schools]);
 
   return (
@@ -64,7 +62,6 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
         <p className="text-sm md:text-base text-slate-500 font-medium">Monitoramento em tempo real da rede municipal.</p>
       </header>
 
-      {/* Cards de Estatísticas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-200 group hover:border-indigo-500 transition-colors">
           <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Total de Vínculos</p>
@@ -85,7 +82,6 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
-        {/* Gráfico de Barras: Lotação por Unidade */}
         <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-lg font-black text-slate-800">Lotação por Unidade</h3>
@@ -117,7 +113,6 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
           </div>
         </div>
 
-        {/* Gráfico de Rosca: Distribuição de Status */}
         <div className="bg-white p-6 md:p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-lg font-black text-slate-800">Status do Efetivo</h3>
@@ -155,7 +150,6 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
         </div>
       </div>
 
-      {/* Seção AI Insights */}
       <div className="bg-slate-900 text-white p-6 md:p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 p-4 opacity-5 rotate-12">
           <svg width="240" height="240" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -163,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({ employees, schools, roles }) => {
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-8">
             <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg shadow-indigo-500/40">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
             </div>
             <div>
                 <h3 className="text-xl md:text-2xl font-black tracking-tighter">Gemini Insight RH</h3>

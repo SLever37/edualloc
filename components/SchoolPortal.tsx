@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Funcionario, Escola, StatusFuncionario, OcorrenciaFrequencia, RhContact } from '../types';
+import { Funcionario, Escola, StatusFuncionario, OcorrenciaFrequencia, RhContact } from '../types.ts';
 
 interface SchoolPortalProps {
   school: Escola;
@@ -56,10 +56,8 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
     const portalUrl = `${window.location.origin}/?portal=${school.codigoGestor}`;
     const message = `*EduAlloc - Portal de Lotação Escolar*\n\nUnidade: ${school.nome}\n\n*Instruções de Acesso:*\n1. Acesse o link abaixo;\n2. Informe o INEP e a Senha de Acesso fornecidos.\n\n*Link de Acesso:* ${portalUrl}\n*INEP:* ${school.inep}\n*Senha:* ${school.codigoAcesso}\n\n_Guarde estas credenciais em segurança._`;
     
-    // Tentar copiar para o clipboard
     navigator.clipboard.writeText(message).then(() => {
         alert("Link e instruções de acesso copiados para a área de transferência! Envie agora para o gestor.");
-        // Opcional: Abrir WhatsApp se possível
         window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     });
   };
@@ -73,11 +71,8 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-20">
-      
-      {/* Header com Logo e Identidade */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-8 md:p-10 bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 text-white flex flex-col md:flex-row items-center gap-8">
-          
           <div className="relative group cursor-pointer shrink-0" onClick={() => fileInputRef.current?.click()}>
             <div className="w-24 h-24 md:w-32 md:h-32 bg-white/10 backdrop-blur-md rounded-[2rem] border-2 border-white/20 flex items-center justify-center overflow-hidden shadow-2xl transition group-hover:scale-105">
                {school.logoUrl ? (
@@ -96,10 +91,7 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
             <div className="flex flex-col md:flex-row md:items-center gap-4 mb-2">
                 <h2 className="text-3xl font-black tracking-tight leading-none">{school.nome}</h2>
                 {isAdminView && (
-                    <button 
-                        onClick={sharePortalAccess}
-                        className="mx-auto md:mx-0 px-3 py-1.5 bg-indigo-600/50 hover:bg-indigo-600 border border-indigo-400 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition flex items-center gap-2"
-                    >
+                    <button onClick={sharePortalAccess} className="mx-auto md:mx-0 px-3 py-1.5 bg-indigo-600/50 hover:bg-indigo-600 border border-indigo-400 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition flex items-center gap-2">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                         Compartilhar Acesso
                     </button>
@@ -168,13 +160,9 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
                     
                     <div className="flex items-center gap-2 w-full md:w-auto">
                       <div className="relative">
-                          <button 
-                            onClick={() => setOpenActionId(openActionId === emp.id ? null : emp.id)}
-                            className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 border border-slate-100 rounded-xl transition-all"
-                          >
+                          <button onClick={() => setOpenActionId(openActionId === emp.id ? null : emp.id)} className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 border border-slate-100 rounded-xl transition-all">
                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                           </button>
-                          
                           {openActionId === emp.id && (
                               <div className="absolute right-0 bottom-full mb-2 w-40 bg-white rounded-xl shadow-xl border border-slate-100 z-50 p-2 animate-modal">
                                   <button onClick={() => { handleWhatsApp(emp); setOpenActionId(null); }} className="w-full text-left p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase transition flex items-center gap-2 mb-1">
@@ -193,12 +181,7 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
                               </div>
                           )}
                       </div>
-
-                      <button 
-                        onClick={() => emp.presencaConfirmada ? setModalFalta(emp) : onToggleAttendance(emp.id, OcorrenciaFrequencia.PRESENCA)}
-                        disabled={emp.status !== StatusFuncionario.ATIVO}
-                        className={`h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex-1 md:flex-none ${emp.presencaConfirmada ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
-                      >
+                      <button onClick={() => emp.presencaConfirmada ? setModalFalta(emp) : onToggleAttendance(emp.id, OcorrenciaFrequencia.PRESENCA)} disabled={emp.status !== StatusFuncionario.ATIVO} className={`h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex-1 md:flex-none ${emp.presencaConfirmada ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}>
                         {emp.presencaConfirmada ? 'Confirmado' : 'Falta'}
                       </button>
                     </div>
@@ -215,26 +198,14 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
                 Mural de Avisos RH
             </h3>
-            
-            <textarea 
-              readOnly={!editNotes}
-              className={`w-full h-40 p-5 rounded-2xl text-sm font-medium outline-none transition-all resize-none ${editNotes ? 'bg-slate-50 border-2 border-indigo-500 shadow-inner' : 'bg-indigo-50/50 border-transparent border-2 text-indigo-900 cursor-default'}`}
-              placeholder="Digite um aviso para o RH..."
-              value={tempNotes}
-              onChange={e => setTempNotes(e.target.value)}
-            />
-            <button 
-                onClick={() => { if(editNotes) onUpdateSchoolNotes?.(tempNotes); setEditNotes(!editNotes); }}
-                className="w-full mt-3 py-3 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase hover:bg-slate-200 transition"
-            >
+            <textarea readOnly={!editNotes} className={`w-full h-40 p-5 rounded-2xl text-sm font-medium outline-none transition-all resize-none ${editNotes ? 'bg-slate-50 border-2 border-indigo-500 shadow-inner' : 'bg-indigo-50/50 border-transparent border-2 text-indigo-900 cursor-default'}`} placeholder="Digite um aviso para o RH..." value={tempNotes} onChange={e => setTempNotes(e.target.value)} />
+            <button onClick={() => { if(editNotes) onUpdateSchoolNotes?.(tempNotes); setEditNotes(!editNotes); }} className="w-full mt-3 py-3 rounded-xl bg-slate-100 text-slate-600 text-[10px] font-black uppercase hover:bg-slate-200 transition">
                 {editNotes ? 'Salvar Aviso' : 'Editar Aviso'}
             </button>
-            
             <div className="mt-8 pt-8 border-t border-slate-100">
                <div className="flex justify-between items-center mb-6">
                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contatos Rápidos RH</h4>
                </div>
-               
                <div className="space-y-4">
                   {(rhContacts).map((c, idx) => (
                       <div key={idx} className="group relative p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-4">
@@ -264,12 +235,7 @@ const SchoolPortal: React.FC<SchoolPortalProps> = ({
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl animate-modal">
             <h3 className="text-xl font-black text-slate-900 mb-6">Informar Ausência</h3>
-            <textarea 
-              className="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-rose-500 transition-all font-medium text-sm mb-6"
-              placeholder="Justificativa (opcional)..."
-              value={obsFalta}
-              onChange={e => setObsFalta(e.target.value)}
-            />
+            <textarea className="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-rose-500 transition-all font-medium text-sm mb-6" placeholder="Justificativa (opcional)..." value={obsFalta} onChange={e => setObsFalta(e.target.value)} />
             <div className="flex gap-4">
               <button onClick={() => setModalFalta(null)} className="flex-1 py-4 font-black text-[10px] text-slate-500 uppercase">Voltar</button>
               <button onClick={() => { onToggleAttendance(modalFalta.id, OcorrenciaFrequencia.FALTA_INJUSTIFICADA, obsFalta); setModalFalta(null); }} className="flex-1 py-4 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-rose-200">Confirmar</button>

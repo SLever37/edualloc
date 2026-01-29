@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Usuario, RhContact, Perfil } from '../types';
+import { Usuario, RhContact, Perfil } from '../types.ts';
 
 interface PerfilViewProps {
   user: Usuario;
@@ -23,7 +23,7 @@ const PerfilView: React.FC<PerfilViewProps> = ({ user, onUpdateProfile, globalCo
     setLoading(true);
     try {
       await onUpdateProfile(nome, email, senha || undefined);
-      setSenha(''); // Limpa senha após salvar
+      setSenha('');
     } catch (error: any) {
       alert("Erro ao atualizar: " + error.message);
     } finally {
@@ -61,7 +61,6 @@ const PerfilView: React.FC<PerfilViewProps> = ({ user, onUpdateProfile, globalCo
         <h2 className="text-3xl font-black text-slate-800 tracking-tight">Editar Perfil</h2>
         <p className="text-slate-500 font-medium">Gerencie suas credenciais de acesso.</p>
       </div>
-
       <div className="bg-white p-10 rounded-3xl border border-slate-200 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-6">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 mb-4">Dados Pessoais</h3>
@@ -69,46 +68,26 @@ const PerfilView: React.FC<PerfilViewProps> = ({ user, onUpdateProfile, globalCo
             <label className={labelClass}>Nome de Exibição</label>
             <input type="text" required className={inputClass} value={nome} onChange={e => setNome(e.target.value)} />
           </div>
-
           <div>
             <label className={labelClass}>Email de Acesso</label>
             <input type="email" required className={inputClass} value={email} onChange={e => setEmail(e.target.value)} />
-            <p className="text-[10px] text-amber-600 mt-2 font-bold flex items-center gap-1">
-              ⚠️ Alterar o email exigirá nova confirmação.
-            </p>
+            <p className="text-[10px] text-amber-600 mt-2 font-bold flex items-center gap-1">⚠️ Alterar o email exigirá nova confirmação.</p>
           </div>
-
           <div className="pt-4 border-t border-slate-100">
             <label className={labelClass}>Nova Senha (Opcional)</label>
-            <input 
-                type="password" 
-                placeholder="Deixe em branco para manter a atual" 
-                className={inputClass} 
-                value={senha} 
-                onChange={e => setSenha(e.target.value)} 
-            />
+            <input type="password" placeholder="Deixe em branco para manter a atual" className={inputClass} value={senha} onChange={e => setSenha(e.target.value)} />
           </div>
-
           <div className="pt-4 flex justify-end">
-             <button type="submit" disabled={loading} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 disabled:opacity-50">
-               {loading ? 'Salvando...' : 'Salvar Alterações'}
-             </button>
+             <button type="submit" disabled={loading} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 disabled:opacity-50">{loading ? 'Salvando...' : 'Salvar Alterações'}</button>
           </div>
         </form>
       </div>
-
       {isAdmin && (
         <div className="bg-white p-10 rounded-3xl border border-slate-200 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Contatos de RH da Rede (Todas Escolas)</h3>
-            <button 
-              onClick={() => setIsEditingContacts(!isEditingContacts)} 
-              className="text-[10px] font-black text-indigo-600 uppercase"
-            >
-              {isEditingContacts ? 'Concluir' : 'Gerenciar'}
-            </button>
+            <button onClick={() => setIsEditingContacts(!isEditingContacts)} className="text-[10px] font-black text-indigo-600 uppercase">{isEditingContacts ? 'Concluir' : 'Gerenciar'}</button>
           </div>
-
           <div className="space-y-4">
             {globalContacts.map((c, idx) => (
               <div key={idx} className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
@@ -122,16 +101,8 @@ const PerfilView: React.FC<PerfilViewProps> = ({ user, onUpdateProfile, globalCo
                 <div className="flex-1">
                   {isEditingContacts ? (
                     <div className="grid grid-cols-2 gap-2">
-                       <input 
-                        className="w-full text-xs font-black bg-white border border-slate-200 rounded px-2 py-1"
-                        value={c.label}
-                        onChange={e => handleContactChange(idx, 'label', e.target.value)}
-                      />
-                      <input 
-                        className="w-full text-xs font-bold bg-white border border-slate-200 rounded px-2 py-1"
-                        value={c.value}
-                        onChange={e => handleContactChange(idx, 'value', e.target.value)}
-                      />
+                       <input className="w-full text-xs font-black bg-white border border-slate-200 rounded px-2 py-1" value={c.label} onChange={e => handleContactChange(idx, 'label', e.target.value)} />
+                       <input className="w-full text-xs font-bold bg-white border border-slate-200 rounded px-2 py-1" value={c.value} onChange={e => handleContactChange(idx, 'value', e.target.value)} />
                     </div>
                   ) : (
                     <>
@@ -152,7 +123,6 @@ const PerfilView: React.FC<PerfilViewProps> = ({ user, onUpdateProfile, globalCo
           <p className="mt-4 text-[10px] text-slate-400 font-medium">Estes contatos aparecem no portal de todas as unidades escolares.</p>
         </div>
       )}
-      
       <div className="text-center p-6 bg-slate-50 rounded-2xl border border-slate-200">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ID do Usuário / Organização</p>
           <code className="text-xs bg-white px-2 py-1 rounded border border-slate-200 text-slate-600 select-all">{user.donoId} codes</code>

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Escola, Turno } from '../types';
+import { Escola, Turno } from '../types.ts';
 
 interface SchoolModalProps {
   school?: Escola;
@@ -9,7 +9,6 @@ interface SchoolModalProps {
 }
 
 const SchoolModal: React.FC<SchoolModalProps> = ({ school, onSave, onClose }) => {
-  
   const gerarCredenciais = () => ({
     codigoGestor: `ESC-${Math.floor(Math.random() * 8999) + 1000}`,
     codigoAcesso: Math.random().toString(36).slice(-6).toUpperCase()
@@ -48,8 +47,6 @@ const SchoolModal: React.FC<SchoolModalProps> = ({ school, onSave, onClose }) =>
     setSaving(true);
     try {
         await onSave(formData);
-    } catch (err) {
-        // Erro já tratado no service/hook (alert)
     } finally {
         setSaving(false);
     }
@@ -69,80 +66,43 @@ const SchoolModal: React.FC<SchoolModalProps> = ({ school, onSave, onClose }) =>
               <p className="text-emerald-100 text-xs font-bold uppercase tracking-widest mt-1">Gestão de Rede</p>
             </div>
             <button type="button" onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl transition">
-               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
-          
           <div className="p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
             <div className="pb-10">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-1">
                     <label className={labelClass}>INEP (8 dígitos)</label>
-                    <input 
-                        required 
-                        type="text" 
-                        maxLength={8}
-                        pattern="[0-9]{8}"
-                        placeholder="12345678"
-                        className={inputClass} 
-                        value={formData.inep} 
-                        onChange={e => setFormData({ ...formData, inep: e.target.value.replace(/\D/g, '') })} 
-                    />
+                    <input required type="text" maxLength={8} pattern="[0-9]{8}" placeholder="12345678" className={inputClass} value={formData.inep} onChange={e => setFormData({ ...formData, inep: e.target.value.replace(/\D/g, '') })} />
                   </div>
                   <div className="md:col-span-2">
                     <label className={labelClass}>Nome da Escola</label>
-                    <input 
-                        required 
-                        type="text" 
-                        placeholder="Ex: E.M. Machado de Assis"
-                        className={inputClass} 
-                        value={formData.nome} 
-                        onChange={e => setFormData({ ...formData, nome: e.target.value })} 
-                    />
+                    <input required type="text" placeholder="Ex: E.M. Machado de Assis" className={inputClass} value={formData.nome} onChange={e => setFormData({ ...formData, nome: e.target.value })} />
                   </div>
                 </div>
-
                 <div className="mt-6">
                 <label className={labelClass}>Endereço Completo</label>
-                <input 
-                    required 
-                    type="text" 
-                    placeholder="Rua, Número, Bairro"
-                    className={inputClass} 
-                    value={formData.endereco} 
-                    onChange={e => setFormData({ ...formData, endereco: e.target.value })} 
-                />
+                <input required type="text" placeholder="Rua, Número, Bairro" className={inputClass} value={formData.endereco} onChange={e => setFormData({ ...formData, endereco: e.target.value })} />
                 </div>
-
                 <div className="mt-6">
                     <label className={labelClass}>Turnos de Funcionamento</label>
                     <div className="grid grid-cols-3 gap-3">
                         {[Turno.MANHA, Turno.TARDE, Turno.NOITE].map((turno) => {
                             const ativo = formData.turnosFuncionamento?.includes(turno);
                             return (
-                                <button
-                                    key={turno}
-                                    type="button"
-                                    onClick={() => toggleTurno(turno)}
-                                    className={`p-3 rounded-xl border-2 font-black text-[10px] uppercase transition ${ativo ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-400 hover:border-emerald-200'}`}
-                                >
+                                <button key={turno} type="button" onClick={() => toggleTurno(turno)} className={`p-3 rounded-xl border-2 font-black text-[10px] uppercase transition ${ativo ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-400 hover:border-emerald-200'}`}>
                                     {turno} {ativo && '✓'}
                                 </button>
                             );
                         })}
                     </div>
                 </div>
-
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 mt-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                            Credenciais
-                        </h3>
-                        <button type="button" onClick={regenerarAcessos} className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 uppercase flex items-center gap-1 bg-white px-2 py-1 rounded border border-indigo-100 shadow-sm">
-                            Gerar Novas
-                        </button>
+                        <h3 className="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2">Credenciais</h3>
+                        <button type="button" onClick={regenerarAcessos} className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 uppercase flex items-center gap-1 bg-white px-2 py-1 rounded border border-indigo-100 shadow-sm">Gerar Novas</button>
                     </div>
-                    
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                           <label className={labelClass}>Código Gestor</label>
@@ -156,16 +116,9 @@ const SchoolModal: React.FC<SchoolModalProps> = ({ school, onSave, onClose }) =>
                 </div>
             </div>
           </div>
-
           <div className="p-6 bg-slate-50 border-t flex justify-end gap-4 shrink-0 safe-area-bottom">
             <button type="button" onClick={onClose} className="px-6 py-3 text-slate-500 font-black uppercase text-xs hover:bg-slate-200 rounded-xl transition">Cancelar</button>
-            <button 
-                type="submit" 
-                disabled={saving}
-                className="px-8 py-3 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 transition shadow-lg shadow-emerald-100 text-xs uppercase tracking-wide disabled:opacity-50"
-            >
-                {saving ? 'Gravando...' : 'Salvar Unidade'}
-            </button>
+            <button type="submit" disabled={saving} className="px-8 py-3 bg-emerald-600 text-white font-black rounded-xl hover:bg-emerald-700 transition shadow-lg shadow-emerald-100 text-xs uppercase tracking-wide disabled:opacity-50">{saving ? 'Gravando...' : 'Salvar Unidade'}</button>
           </div>
         </form>
       </div>

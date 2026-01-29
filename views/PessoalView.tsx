@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Funcionario, Escola, Funcao, Setor, StatusFuncionario } from '../types';
-import ExcelImportModal from '../components/ExcelImportModal';
+import { Funcionario, Escola, Funcao, Setor, StatusFuncionario } from '../types.ts';
+import ExcelImportModal from '../components/ExcelImportModal.tsx';
 
 interface PessoalViewProps {
   funcionarios: Funcionario[];
@@ -17,7 +17,6 @@ interface PessoalViewProps {
 const PessoalView: React.FC<PessoalViewProps> = ({ funcionarios, escolas, funcoes, setores, aoEditar, aoAdicionar, aoRemover, onImport }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterEscola, setFilterEscola] = useState('');
-  const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
 
   const filtered = funcionarios.filter(f => 
@@ -46,7 +45,6 @@ const PessoalView: React.FC<PessoalViewProps> = ({ funcionarios, escolas, funcoe
         </select>
       </div>
 
-      {/* Visão Desktop: Tabela */}
       <div className="hidden lg:block bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-100">
@@ -87,7 +85,6 @@ const PessoalView: React.FC<PessoalViewProps> = ({ funcionarios, escolas, funcoe
         </table>
       </div>
 
-      {/* Visão Mobile: Cards */}
       <div className="lg:hidden space-y-4">
           {filtered.map(f => (
             <div key={f.id} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">

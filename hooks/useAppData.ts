@@ -1,8 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Funcionario, Escola, Perfil, OcorrenciaFrequencia, StatusFuncionario, RhContact } from '../types.ts';
-import { employeeService } from '../services/employeeService.ts';
-import { schoolService } from '../services/schoolService.ts';
+import { employeeService } from '../features/employees/employee.service.ts';
+import { schoolService } from '../features/schools/school.service.ts';
 import { rhContactService } from '../services/rhContactService.ts';
 import { useCatalogs } from './useCatalogs.ts';
 
@@ -21,43 +21,29 @@ export const useAppData = (
     adicionarFuncao, editarFuncao, removerFuncao 
   } = useCatalogs(donoId);
 
-  const carregarContatosGlobais = useCallback(async () => {
-    if (!donoId) return;
-    try {
-      const data = await rhContactService.getAll(donoId);
-      if (data && data.length > 0) {
-        setContatosRhGlobais(data);
-      } else {
-        // Fallback apenas se banco retornar vazio
-        setContatosRhGlobais([
-          { label: 'Suporte RH Central', value: 'rh@municipio.gov.br', type: 'email' },
-          { label: 'Plantão Lotação', value: '(00) 0000-0000', type: 'phone' }
-        ]);
-      }
-    } catch (e) {
-      console.error("Erro ao carregar contatos de RH:", e);
-    }
-  }, [donoId]);
-
   const recarregarDados = useCallback(async () => {
     if (!donoId) return;
 
     try {
       carregarCatalogos();
-      carregarContatosGlobais();
-
-      const [fData, eData] = await Promise.all([
+      
+      const [fData, eData, rhData] = await Promise.all([
         employeeService.getAll(donoId),
-        schoolService.getAll(donoId)
+        schoolService.getAll(donoId),
+        rhContactService.getAll(donoId)
       ]);
 
       setFuncionarios(fData);
       setEscolas(eData);
+      setContatosRhGlobais(rhData.length > 0 ? rhData : [
+          { label: 'Suporte RH Central', value: 'rh@municipio.gov.br', type: 'email' },
+          { label: 'Plantão Lotação', value: '(00) 0000-0000', type: 'phone' }
+      ]);
 
     } catch (e) {
-      console.error("Erro crítico no carregamento de dados:", e);
+      console.error("Erro no carregamento de dados:", e);
     }
-  }, [donoId, carregarCatalogos, carregarContatosGlobais]);
+  }, [donoId, carregarCatalogos]);
 
   useEffect(() => {
     recarregarDados();
@@ -65,99 +51,49 @@ export const useAppData = (
 
   const salvarFuncionario = async (dados: Partial<Funcionario>, foto?: File) => {
     if (!donoId) return;
-    try {
-        await employeeService.save(dados, donoId, foto);
-        await recarregarDados();
-    } catch (e: any) {
-        alert(e.message);
-        throw e;
-    }
+    await employeeService.save(dados, donoId, foto);
+    await recarregarDados();
   };
 
   const removerFuncionario = async (id: string) => {
-    if (!donoId) return;
-    try {
-        await employeeService.delete(id);
-        await recarregarDados();
-    } catch (e: any) {
-        alert("Erro ao remover: " + e.message);
-    }
+    await employeeService.delete(id);
+    await recarregarDados();
   };
 
   const salvarEscola = async (dados: Partial<Escola>, logo?: File) => {
     if (!donoId) return;
-    try {
-        await schoolService.upsert(dados, donoId, logo);
-        await recarregarDados();
-    } catch (e: any) {
-        alert(e.message);
-        throw e;
-    }
+    await schoolService.upsert(dados, donoId, logo);
+    await recarregarDados();
   };
 
   const removerEscola = async (id: string) => {
-    if (!donoId) return;
-    try {
-        await schoolService.delete(id);
-        await recarregarDados();
-    } catch (e: any) {
-        alert("Erro ao remover unidade: " + e.message);
-    }
+    await schoolService.delete(id);
+    await recarregarDados();
   };
 
   const salvarContatosGlobais = async (novosContatos: RhContact[]) => {
     if (!donoId) return;
-    try {
-      await rhContactService.sync(donoId, novosContatos);
-      setContatosRhGlobais(novosContatos);
-    } catch (e: any) {
-      console.error("Erro ao sincronizar contatos de RH:", e);
-      alert("Erro ao salvar contatos globais no servidor.");
-    }
+    await rhContactService.sync(donoId, novosContatos);
+    setContatosRhGlobais(novosContatos);
   };
 
   const alternarPresenca = async (id: string, ocorrencia: OcorrenciaFrequencia, observacao?: string, statusGeral?: StatusFuncionario, arquivo?: File) => {
     if (!donoId) return;
-    try {
-        await employeeService.registrarFrequencia(id, ocorrencia, donoId, observacao, statusGeral, arquivo);
-        await recarregarDados();
-    } catch (e: any) {
-        alert("Erro ao registrar frequência: " + e.message);
-    }
+    await employeeService.registrarFrequencia(id, ocorrencia, donoId, observacao, statusGeral, arquivo);
+    await recarregarDados();
   };
 
   const importarEmLote = async (listaFuncionarios: Partial<Funcionario>[]) => {
     if (!donoId) return;
-    let erros = 0;
     for (const func of listaFuncionarios) {
-      try {
-        await employeeService.save(func, donoId);
-      } catch (e) {
-        erros++;
-      }
+      try { await employeeService.save(func, donoId); } catch (e) { console.error(e); }
     }
-    if (erros > 0) alert(`${erros} registros falharam na importação.`);
     await recarregarDados();
   };
 
   return {
-    funcionarios,
-    escolas,
-    setores,
-    funcoes,
-    contatosRhGlobais,
-    salvarFuncionario,
-    removerFuncionario,
-    salvarEscola,
-    removerEscola,
-    salvarContatosGlobais,
-    alternarPresenca,
-    importarEmLote,
-    adicionarSetor,
-    editarSetor,
-    removerSetor,
-    adicionarFuncao,
-    editarFuncao,
-    removerFuncao
+    funcionarios, escolas, setores, funcoes, contatosRhGlobais,
+    salvarFuncionario, removerFuncionario, salvarEscola, removerEscola, salvarContatosGlobais, alternarPresenca, importarEmLote,
+    adicionarSetor, editarSetor, removerSetor, adicionarFuncao, editarFuncao, removerFuncao
   };
 };

@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Funcionario, Escola, Perfil } from './types.ts';
+import { Funcionario, Escola } from './types.ts';
 import { useAuth } from './hooks/useAuth.ts';
 import { useAppData } from './hooks/useAppData.ts';
 import { checkDatabaseConnection } from './services/supabase.ts';
+import { useAppNavigation } from './app/useAppNavigation.ts';
 
 // Views & Components
 import Layout from './components/Layout.tsx';
@@ -25,22 +27,22 @@ const App: React.FC = () => {
     loginAdmin, loginEscola, logout
   } = useAuth();
 
-  const [visaoAtiva, setVisaoAtiva] = useState<string>('dashboard');
-  const [idEscolaSelecionada, setIdEscolaSelecionada] = useState<string | null>(null);
-  const [isRestrictedPortal, setIsRestrictedPortal] = useState(false);
-  const [portalCodeFromUrl, setPortalCodeFromUrl] = useState('');
-  const [dbStatus, setDbStatus] = useState<{ ok: boolean, message: string } | null>(null);
+  const {
+    visaoAtiva, idEscolaSelecionada, isRestrictedPortal, portalCodeFromUrl, navegarPara
+  } = useAppNavigation(usuario, logout, setAuthError);
 
-  const isOAuthCallback = useMemo(() => {
-    const hash = window.location.hash;
-    return hash.includes('access_token=') || hash.includes('type=recovery');
-  }, []);
+  const [dbStatus, setDbStatus] = useState<{ ok: boolean, message: string } | null>(null);
+  const [loadingAuthAction, setLoadingAuthAction] = useState(false);
 
   const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState<Funcionario | undefined>();
   const [escolaEmEdicao, setEscolaEmEdicao] = useState<Escola | undefined>();
   const [isModalFuncionarioAberto, setIsModalFuncionarioAberto] = useState(false);
   const [isModalEscolaAberto, setIsModalEscolaAberto] = useState(false);
-  const [loadingAuthAction, setLoadingAuthAction] = useState(false);
+
+  const isOAuthCallback = useMemo(() => {
+    const hash = window.location.hash;
+    return hash.includes('access_token=') || hash.includes('type=recovery');
+  }, []);
 
   const {
     funcionarios, escolas, setores, funcoes, contatosRhGlobais,
@@ -49,95 +51,9 @@ const App: React.FC = () => {
     adicionarFuncao, editarFuncao, removerFuncao
   } = useAppData(usuario?.id, usuario?.donoId, usuario?.perfil);
 
-  // --- PREVENÇÃO DE SAÍDA E GESTÃO DE HISTÓRICO ---
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (usuario) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    const handlePopState = (event: PopStateEvent) => {
-      if (event.state && event.state.view) {
-        setVisaoAtiva(event.state.view);
-        if (event.state.escolaId) setIdEscolaSelecionada(event.state.escolaId);
-      } else {
-        setVisaoAtiva('dashboard');
-      }
-    };
-
-    const keepAliveInterval = setInterval(() => {
-      console.debug("EduAlloc: Mantendo conexão ativa...");
-    }, 1000 * 60 * 30);
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-
-    if (!window.history.state) {
-      window.history.replaceState({ view: 'dashboard' }, '');
-    }
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-      clearInterval(keepAliveInterval);
-    };
-  }, [usuario]);
-
-  // Detecta Portal Escolar na URL (?portal=CODIGO)
   useEffect(() => {
     checkDatabaseConnection().then(setDbStatus);
-
-    const params = new URLSearchParams(window.location.search);
-    const portalCode = params.get('portal');
-
-    if (portalCode) {
-      setPortalCodeFromUrl(portalCode);
-      setIsRestrictedPortal(true);
-    } else {
-      setPortalCodeFromUrl('');
-      setIsRestrictedPortal(false);
-    }
   }, []);
-
-  /**
-   * ✅ CORREÇÃO: se está em modo portal restrito e existe sessão RH/Admin,
-   * força logout para não redirecionar pro portal do RH no mesmo navegador.
-   */
-  useEffect(() => {
-    const enforcePortalIsolation = async () => {
-      if (!isRestrictedPortal) return;
-      if (!portalCodeFromUrl) return;
-      if (!usuario) return;
-
-      // Se está logado mas não é gestor escolar, precisa sair.
-      if (usuario.perfil !== Perfil.GESTOR_ESCOLAR) {
-        setAuthError('Este link é do Portal da Escola. Faça login como gestor da unidade.');
-        await logout();
-      }
-    };
-
-    enforcePortalIsolation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRestrictedPortal, portalCodeFromUrl, usuario]);
-
-  // Redireciona gestor escolar para sua visão única
-  useEffect(() => {
-    if (usuario?.perfil === Perfil.GESTOR_ESCOLAR && usuario.escolaId) {
-      setIdEscolaSelecionada(usuario.escolaId);
-      setVisaoAtiva('portal-escola');
-      window.history.replaceState({ view: 'portal-escola', escolaId: usuario.escolaId }, '');
-    }
-  }, [usuario]);
-
-  const navegarPara = (view: string, escolaId?: string) => {
-    if (view === visaoAtiva && escolaId === idEscolaSelecionada) return;
-
-    setVisaoAtiva(view);
-    if (escolaId) setIdEscolaSelecionada(escolaId);
-    window.history.pushState({ view, escolaId }, '');
-  };
 
   const handleSchoolLogin = async (code: string, pass: string) => {
     setLoadingAuthAction(true);
@@ -154,12 +70,7 @@ const App: React.FC = () => {
     );
   }
 
-  /**
-   * ✅ PRIORIDADE TOTAL: se for link do Portal da Escola, respeitar sempre.
-   * - Se NÃO estiver logado como GESTOR_ESCOLAR => mostra SchoolDirectLoginView
-   * - Se estiver logado como GESTOR_ESCOLAR => segue normal e cai no redirect do useEffect para portal-escola
-   */
-  if (isRestrictedPortal && (!usuario || usuario.perfil !== Perfil.GESTOR_ESCOLAR)) {
+  if (isRestrictedPortal && (!usuario || usuario.perfil !== 'GESTOR_ESCOLAR' as any)) {
     return (
       <SchoolDirectLoginView
         schoolCode={portalCodeFromUrl}
@@ -171,7 +82,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Login normal (Admin/RH)
   if (!usuario) {
     return (
       <MainLoginView
@@ -188,16 +98,9 @@ const App: React.FC = () => {
       {dbStatus && !dbStatus.ok && visaoAtiva === 'dashboard' && (
         <div className="mb-8 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-4 text-rose-800 animate-in slide-in-from-top-4">
           <div className="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
           </div>
-          <div>
-            <p className="text-sm font-black uppercase">Atenção: Erro de Banco de Dados</p>
-            <p className="text-xs font-medium opacity-80">{dbStatus.message}</p>
-          </div>
+          <div><p className="text-sm font-black uppercase">Erro de Banco de Dados</p><p className="text-xs font-medium opacity-80">{dbStatus.message}</p></div>
         </div>
       )}
 
@@ -231,9 +134,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {visaoAtiva === 'users' && (
-        <UsuariosView currentUser={usuario} onRegisterTeamMember={async (e, p, n) => { }} />
-      )}
+      {visaoAtiva === 'users' && <UsuariosView currentUser={usuario} onRegisterTeamMember={async () => { }} />}
 
       {visaoAtiva === 'profile' && (
         <PerfilView
@@ -253,7 +154,7 @@ const App: React.FC = () => {
             sectorLabel: setores.find(s => s.id === f.setorId)?.nome
           })) as any}
           onToggleAttendance={alternarPresenca}
-          isAdminView={usuario.perfil === Perfil.ADMINISTRADOR || usuario.perfil === Perfil.SUPER_ADMIN}
+          isAdminView={usuario.perfil === 'ADMINISTRADOR' as any || usuario.perfil === 'SUPER_ADMIN' as any}
           onEditEmployee={(f) => { setFuncionarioEmEdicao(f); setIsModalFuncionarioAberto(true); }}
           onUpdateSchoolNotes={(notes) => salvarEscola({ id: idEscolaSelecionada, notasUnidade: notes })}
           onUpdateLogo={(file) => salvarEscola({ id: idEscolaSelecionada }, file)}

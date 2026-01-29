@@ -178,7 +178,7 @@ export const authService = {
           if (error.message.includes("Invalid login credentials")) {
               throw new Error("Credenciais de login inválidas.");
           }
-          throw error;
+          throw new Error(error.message);
       }
       return { success: true, user: data.user };
     }
