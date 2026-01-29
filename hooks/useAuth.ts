@@ -19,6 +19,7 @@ export const useAuth = () => {
       console.error("Erro ao carregar sessão inicial:", e);
       setUsuario(null);
     } finally {
+      // Garantia de que o loader sempre fecha
       setLoadingSession(false);
     }
   };
@@ -27,11 +28,13 @@ export const useAuth = () => {
     carregarSessao();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // INITIAL_SESSION garante que o carregamento termine assim que o Supabase estiver pronto
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        const user = await authService.getSessionUser(session);
-        setUsuario(user);
-        setLoadingSession(false);
+        try {
+          const user = await authService.getSessionUser(session);
+          setUsuario(user);
+        } finally {
+          setLoadingSession(false);
+        }
       } else if (event === 'SIGNED_OUT') {
         setUsuario(null);
         setLoadingSession(false);
@@ -57,14 +60,26 @@ export const useAuth = () => {
       return { success: false };
     }
   };
+
+  const loginEscola = async (codigoGestor: string, codigoAcesso: string) => {
+    setAuthError('');
+    try {
+      const result = await authService.loginEscola(codigoGestor, codigoAcesso);
+      if (result.success && result.user) {
+        setUsuario(result.user as Usuario);
+      }
+      return result;
+    } catch (e: any) {
+      setAuthError(e.message || "Credenciais da unidade inválidas");
+      return { success: false };
+    }
+  };
   
   const loginGoogle = async () => {
     setAuthError('');
     try {
-        const result: any = await authService.loginWithGoogle();
-        if (result && result.user) {
-            setUsuario(result.user as Usuario);
-        }
+        await authService.loginWithGoogle();
+        // O redirecionamento é tratado pelo onAuthStateChange
     } catch (e: any) {
         setAuthError(e.message || "Erro ao conectar com Google");
     }
@@ -85,11 +100,12 @@ export const useAuth = () => {
         
         setUsuario(null);
         setAuthError('');
+        setLoadingSession(false);
         if (window.history.replaceState) {
             window.history.replaceState(null, '');
         }
     }
   };
 
-  return { usuario, setUsuario, loadingSession, authError, setAuthError, loginAdmin, loginGoogle, logout };
+  return { usuario, setUsuario, loadingSession, authError, setAuthError, loginAdmin, loginEscola, loginGoogle, logout };
 };

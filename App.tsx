@@ -23,7 +23,7 @@ import AuthCallbackView from './views/AuthCallbackView';
 const App: React.FC = () => {
   const { 
     usuario, loadingSession, authError, setAuthError, 
-    loginAdmin, logout 
+    loginAdmin, loginEscola, logout 
   } = useAuth();
 
   const [visaoAtiva, setVisaoAtiva] = useState<string>('dashboard');
@@ -32,14 +32,9 @@ const App: React.FC = () => {
   const [portalCodeFromUrl, setPortalCodeFromUrl] = useState('');
   const [dbStatus, setDbStatus] = useState<{ok: boolean, message: string} | null>(null);
   
-  // Detecção imediata de callback para exibir AuthCallbackView antes mesmo da sessão carregar
   const isOAuthCallback = useMemo(() => {
     const hash = window.location.hash;
-    const search = window.location.search;
-    return hash.includes('access_token=') || 
-           hash.includes('type=recovery') || 
-           hash.includes('type=signup') ||
-           search.includes('code=');
+    return hash.includes('access_token=') || hash.includes('type=recovery');
   }, []);
 
   const [funcionarioEmEdicao, setFuncionarioEmEdicao] = useState<Funcionario | undefined>();
@@ -56,12 +51,7 @@ const App: React.FC = () => {
   } = useAppData(usuario?.id, usuario?.donoId, usuario?.perfil);
 
   useEffect(() => {
-    const checkDb = async () => {
-        const status = await checkDatabaseConnection();
-        setDbStatus(status);
-    };
-    checkDb();
-
+    checkDatabaseConnection().then(setDbStatus);
     const params = new URLSearchParams(window.location.search);
     const portalCode = params.get('portal');
     if (portalCode) {
@@ -69,26 +59,6 @@ const App: React.FC = () => {
       setIsRestrictedPortal(true);
     }
   }, []);
-
-  useEffect(() => {
-    if (usuario && isOAuthCallback) {
-      window.history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-  }, [usuario, isOAuthCallback]);
-
-  useEffect(() => {
-    if (usuario) {
-      window.history.replaceState({ view: 'dashboard' }, '');
-      const handlePopState = (event: PopStateEvent) => {
-        if (event.state?.view) {
-          setVisaoAtiva(event.state.view);
-          if (event.state.escolaId) setIdEscolaSelecionada(event.state.escolaId);
-        }
-      };
-      window.addEventListener('popstate', handlePopState);
-      return () => window.removeEventListener('popstate', handlePopState);
-    }
-  }, [usuario]);
 
   useEffect(() => {
       if(usuario?.perfil === Perfil.GESTOR_ESCOLAR && usuario.escolaId) {
@@ -103,41 +73,10 @@ const App: React.FC = () => {
     window.history.pushState({ view, escolaId }, '');
   };
 
-  const handleAdminLogin = async (email: string, pass: string, isSignUp: boolean) => {
+  const handleSchoolLogin = async (code: string, pass: string) => {
     setLoadingAuthAction(true);
-    await loginAdmin(email, pass, isSignUp);
+    await loginEscola(code, pass);
     setLoadingAuthAction(false);
-  };
-
-  const handleUpdateSchoolNotes = async (notes: string) => {
-    if (idEscolaSelecionada) {
-      await salvarEscola({ id: idEscolaSelecionada, notasUnidade: notes });
-    }
-  };
-
-  const adicionarMembroEquipe = async (email: string, pass: string, nome: string) => {
-    if (!usuario) return;
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: pass,
-      options: {
-        data: {
-          full_name: nome,
-          perfil: Perfil.ADMINISTRADOR,
-          dono_id: usuario.donoId
-        }
-      }
-    });
-    if (error) throw error;
-    if (data.user) {
-      await supabase.from('perfis').upsert({
-        id: data.user.id,
-        nome: nome,
-        email: email,
-        perfil: Perfil.ADMINISTRADOR,
-        dono_id: usuario.donoId
-      });
-    }
   };
 
   if (loadingSession || (isOAuthCallback && !usuario)) {
@@ -154,7 +93,7 @@ const App: React.FC = () => {
       return (
         <SchoolDirectLoginView 
           schoolCode={portalCodeFromUrl} 
-          onLogin={async () => {}} 
+          onLogin={handleSchoolLogin} 
           onExit={() => setIsRestrictedPortal(false)} 
           loading={loadingAuthAction} 
           error={authError} 
@@ -163,7 +102,7 @@ const App: React.FC = () => {
     }
     return (
       <MainLoginView 
-        onAdminLogin={handleAdminLogin} 
+        onAdminLogin={loginAdmin} 
         loading={loadingAuthAction} 
         error={authError} 
         onClearMessages={() => setAuthError('')}
@@ -212,7 +151,7 @@ const App: React.FC = () => {
         />
       )}
       {visaoAtiva === 'users' && (
-        <UsuariosView currentUser={usuario} onRegisterTeamMember={adicionarMembroEquipe} />
+        <UsuariosView currentUser={usuario} onRegisterTeamMember={async (e,p,n) => {}} />
       )}
       {visaoAtiva === 'profile' && (
           <PerfilView user={usuario} onUpdateProfile={async () => {}} />
@@ -228,7 +167,9 @@ const App: React.FC = () => {
           onToggleAttendance={alternarPresenca}
           isAdminView={usuario.perfil === Perfil.ADMINISTRADOR || usuario.perfil === Perfil.SUPER_ADMIN}
           onEditEmployee={(f) => { setFuncionarioEmEdicao(f); setIsModalFuncionarioAberto(true); }}
-          onUpdateSchoolNotes={handleUpdateSchoolNotes}
+          onUpdateSchoolNotes={(notes) => salvarEscola({ id: idEscolaSelecionada, notasUnidade: notes })}
+          onUpdateLogo={(file) => salvarEscola({ id: idEscolaSelecionada }, file)}
+          onUpdateRhContacts={(contacts) => salvarEscola({ id: idEscolaSelecionada, contatosRh: contacts })}
         />
       )}
       {isModalFuncionarioAberto && (
