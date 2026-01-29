@@ -4,7 +4,8 @@ import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/auth.service';
 
 interface MainLoginViewProps {
-  onAdminLogin: (email: string, pass: string, isSignUp: boolean) => Promise<void>;
+  // Fix: changed Promise<void> to Promise<any> to match the actual return type of loginAdmin from useAuth, as the return value is not used in this component.
+  onAdminLogin: (email: string, pass: string, isSignUp: boolean) => Promise<any>;
   loading: boolean;
   error: string;
   onClearMessages: () => void;
